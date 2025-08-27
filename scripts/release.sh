@@ -16,6 +16,7 @@ NC='\033[0m' # No Color
 # Configuration
 BUILD_GRADLE="app/build.gradle.kts"
 CHANGELOG="CHANGELOG.md"
+README="README.md"
 BACKUP_SUFFIX=".backup"
 GITHUB_REPO="bilal-/MassPing"
 MAIN_BRANCH="main"
@@ -164,6 +165,21 @@ update_changelog() {
     log_success "Added changelog entry for version $version"
 }
 
+# Update version in README.md
+update_readme() {
+    local version="$1"
+    
+    log_info "Updating $README version..."
+    
+    # Create backup
+    cp "$README" "$README$BACKUP_SUFFIX"
+    
+    # Update version in README.md
+    sed -i '' "s/\*\*Version:\*\* [0-9]*\.[0-9]*\.[0-9]*/\*\*Version:\*\* $version/" "$README"
+    
+    log_success "Updated README.md version to $version"
+}
+
 # Build and test
 build_and_test() {
     log_info "Building and testing..."
@@ -190,12 +206,18 @@ rollback_changes() {
         mv "$CHANGELOG$BACKUP_SUFFIX" "$CHANGELOG"
         log_success "Restored $CHANGELOG"
     fi
+    
+    if [ -f "$README$BACKUP_SUFFIX" ]; then
+        mv "$README$BACKUP_SUFFIX" "$README"
+        log_success "Restored $README"
+    fi
 }
 
 # Clean up backup files
 cleanup_backups() {
     rm -f "$BUILD_GRADLE$BACKUP_SUFFIX"
     rm -f "$CHANGELOG$BACKUP_SUFFIX"
+    rm -f "$README$BACKUP_SUFFIX"
 }
 
 # Check if GitHub CLI is installed
@@ -467,9 +489,10 @@ main() {
     # Update files on release branch
     update_build_gradle "$new_version" "$new_version_code"
     update_changelog "$new_version" "$release_notes"
+    update_readme "$new_version"
     
     # Commit changes to release branch
-    git add "$BUILD_GRADLE" "$CHANGELOG"
+    git add "$BUILD_GRADLE" "$CHANGELOG" "$README"
     git commit -m "Release v$new_version
 
 $release_notes
@@ -512,7 +535,8 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     echo "✅ What was done:"
     echo "  • Created release branch: $release_branch"
     echo "  • Updated version to $new_version (code: $new_version_code)"
-    echo "  • Updated CHANGELOG.md"
+    echo "  • Updated CHANGELOG.md with release notes"
+    echo "  • Updated README.md version"
     echo "  • Built and tested APKs"
     echo "  • Created GitHub release: https://github.com/$GITHUB_REPO/releases/tag/v$new_version"
     echo "  • Uploaded APK files to GitHub"

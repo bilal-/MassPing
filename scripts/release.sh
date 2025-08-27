@@ -235,6 +235,13 @@ check_github_cli() {
         log_info "  gh auth login"
         exit 1
     fi
+    
+    # Test GitHub API access
+    if ! gh api user &> /dev/null; then
+        log_error "GitHub API access failed. Please check your authentication:"
+        log_info "  gh auth refresh"
+        exit 1
+    fi
 }
 
 # Create or switch to release branch
@@ -337,18 +344,35 @@ See [CHANGELOG.md](https://github.com/$GITHUB_REPO/blob/v$version/CHANGELOG.md) 
 **Full Changelog:** https://github.com/$GITHUB_REPO/compare/v$(get_previous_version)...v$version"
     fi
     
-    # Create release with APK uploads
+    # Verify APK files exist before creating release
+    if [ ! -f "$APK_RELEASE_PATH" ]; then
+        log_error "Release APK not found: $APK_RELEASE_PATH"
+        return 1
+    fi
+    
+    if [ ! -f "$APK_DEBUG_PATH" ]; then
+        log_error "Debug APK not found: $APK_DEBUG_PATH"
+        return 1
+    fi
+    
+    # Create release with APK uploads (target the current branch where tag was created)
+    log_info "Uploading APKs to GitHub release..."
     if gh release create "v$version" \
         "$APK_RELEASE_PATH#MassPing-v$version-release.apk" \
         "$APK_DEBUG_PATH#MassPing-v$version-debug.apk" \
         --title "MassPing v$version" \
         --notes "$full_notes" \
-        --target "release/v$version"; then
+        --draft=false \
+        --latest; then
         
         log_success "GitHub release created: https://github.com/$GITHUB_REPO/releases/tag/v$version"
+        log_info "APK downloads available:"
+        log_info "  Release: https://github.com/$GITHUB_REPO/releases/download/v$version/MassPing-v$version-release.apk"
+        log_info "  Debug: https://github.com/$GITHUB_REPO/releases/download/v$version/MassPing-v$version-debug.apk"
         return 0
     else
         log_error "Failed to create GitHub release"
+        log_warning "You can create it manually at: https://github.com/$GITHUB_REPO/releases/new?tag=v$version"
         return 1
     fi
 }
@@ -504,11 +528,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     # Create git tag
     git tag -a "v$new_version" -m "Release v$new_version"
     
-    # Build APKs
-    build_release_apks
+    # Push the release branch first (needed for GitHub release)
+    log_info "Pushing release branch to GitHub..."
+    git push origin "$release_branch"
     
     # Push tag to GitHub
     push_git_tag "$new_version"
+    
+    # Build APKs
+    build_release_apks
     
     # Create GitHub release with APK uploads
     if create_github_release "$new_version" "$release_notes" "$is_hotfix"; then

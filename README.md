@@ -202,6 +202,73 @@ The project includes both unit tests and instrumented tests:
 ./gradlew test
 ```
 
+## 🚀 Release Management
+
+MassPing uses an automated release management system with semantic versioning.
+
+### Version Management
+
+The project follows [Semantic Versioning](https://semver.org/) (MAJOR.MINOR.PATCH):
+- **PATCH**: Bug fixes (1.0.0 → 1.0.1)
+- **MINOR**: New features (1.0.0 → 1.1.0)
+- **MAJOR**: Breaking changes (1.0.0 → 2.0.0)
+
+### Automated Release Process
+
+Use the release script to automate the entire release workflow:
+
+```bash
+# Feature release
+./scripts/release.sh minor "Add SMS scheduling and templates"
+
+# Bug fix release
+./scripts/release.sh patch "Fix Android 14 permission issues"
+
+# Hotfix from existing release branch
+./scripts/release.sh patch "Critical SMS delivery fix" --hotfix
+
+# Major release (manual decision only)
+./scripts/release.sh major "Complete architecture overhaul"
+```
+
+### What the Release Script Does
+
+The automated release process handles:
+
+1. **📋 Version Management**: Updates `build.gradle.kts` version and code
+2. **📝 Changelog**: Updates `CHANGELOG.md` with release notes and date
+3. **🌳 Git Flow**: Creates release branches (`release/vX.Y.Z`)
+4. **🏗️ Build Process**: Builds and tests both debug and release APKs
+5. **🏷️ Git Tags**: Creates and pushes version tags
+6. **📦 GitHub Releases**: Creates GitHub releases with APK uploads
+7. **🔄 Branch Management**: Merges release branch back to main
+8. **📱 APK Distribution**: Uploads signed APKs to GitHub releases
+
+### Prerequisites for Releases
+
+1. **GitHub CLI**: Install and authenticate
+   ```bash
+   brew install gh
+   gh auth login
+   ```
+
+2. **Keystore**: Release keystore should be in `~/keystores/massping-release-key.jks`
+
+3. **Clean Working Directory**: Commit or stash any pending changes
+
+### Release Branch Strategy
+
+- **Normal Releases**: `main` → `release/vX.Y.Z` → merge back to `main`
+- **Hotfixes**: `release/vX.Y.0` → `release/vX.Y.Z` → selective merge
+
+### Download Releases
+
+All releases are available on GitHub with direct APK downloads:
+- **Production**: Download `MassPing-vX.Y.Z-release.apk`
+- **Testing**: Download `MassPing-vX.Y.Z-debug.apk`
+
+**Latest Release**: [GitHub Releases](https://github.com/bilal-/MassPing/releases)
+
 ## 🤝 Contributing
 
 1. Fork the repository

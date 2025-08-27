@@ -1,7 +1,7 @@
 # MassPing
 
-**Author:** Bilal Ahmad  
-**Version:** 1.2.0  
+**Author:** Bilal Ahmad
+**Version:** 1.2.0
 **Platform:** Android (API 29+)
 
 A powerful Android application for sending personalized bulk SMS messages to your contacts. MassPing integrates with your Google contacts and local device contacts to enable efficient mass messaging with personalization features.
@@ -238,11 +238,11 @@ The automated release process handles:
 1. **📋 Version Management**: Updates `build.gradle.kts` version and code
 2. **📝 Changelog**: Updates `CHANGELOG.md` with release notes and date
 3. **🌳 Git Flow**: Creates release branches (`release/vX.Y.Z`)
-4. **🏗️ Build Process**: Builds and tests both debug and release APKs
+4. **🏗️ Build Process**: Builds and tests debug/release APKs and AABs
 5. **🏷️ Git Tags**: Creates and pushes version tags
-6. **📦 GitHub Releases**: Creates GitHub releases with APK uploads
+6. **📦 GitHub Releases**: Creates GitHub releases with APK and AAB uploads
 7. **🔄 Branch Management**: Merges release branch back to main
-8. **📱 APK Distribution**: Uploads signed APKs to GitHub releases
+8. **📱 Multi-Format Distribution**: Uploads APKs (direct install) and AABs (Google Play)
 
 ### Prerequisites for Releases
 

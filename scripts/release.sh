@@ -20,8 +20,18 @@ README="README.md"
 BACKUP_SUFFIX=".backup"
 GITHUB_REPO="bilal-/MassPing"
 MAIN_BRANCH="main"
-APK_DEBUG_PATH="app/build/outputs/apk/debug/app-debug.apk"
-APK_RELEASE_PATH="app/build/outputs/apk/release/app-release.apk"
+# Note: These paths will be dynamically updated based on version in build function
+
+# Build dynamic file paths based on current version
+get_build_artifact_paths() {
+    local version="$1"
+
+    # Use default gradle naming pattern for build outputs
+    APK_DEBUG_PATH="app/build/outputs/apk/debug/app-debug.apk"
+    APK_RELEASE_PATH="app/build/outputs/apk/release/app-release.apk"
+    AAB_DEBUG_PATH="app/build/outputs/bundle/debug/app-debug.aab"
+    AAB_RELEASE_PATH="app/build/outputs/bundle/release/app-release.aab"
+}
 
 # Helper functions
 log_info() {
@@ -51,7 +61,7 @@ show_usage() {
     echo ""
     echo "Version bumping rules:"
     echo "  patch: 1.0.0 → 1.0.1 (bug fixes)"
-    echo "  minor: 1.0.0 → 1.1.0 (new features)"  
+    echo "  minor: 1.0.0 → 1.1.0 (new features)"
     echo "  major: 1.0.0 → 2.0.0 (breaking changes)"
     echo ""
     echo "Workflow:"
@@ -74,9 +84,9 @@ get_current_version() {
 calculate_next_version() {
     local current_version="$1"
     local bump_type="$2"
-    
+
     IFS='.' read -r major minor patch <<< "$current_version"
-    
+
     case "$bump_type" in
         "patch")
             patch=$((patch + 1))
@@ -95,7 +105,7 @@ calculate_next_version() {
             exit 1
             ;;
     esac
-    
+
     echo "$major.$minor.$patch"
 }
 
@@ -103,16 +113,16 @@ calculate_next_version() {
 update_build_gradle() {
     local new_version="$1"
     local new_version_code="$2"
-    
+
     log_info "Updating $BUILD_GRADLE..."
-    
+
     # Create backup
     cp "$BUILD_GRADLE" "$BUILD_GRADLE$BACKUP_SUFFIX"
-    
+
     # Update versionName and versionCode
     sed -i '' "s/versionName = \"[^\"]*\"/versionName = \"$new_version\"/" "$BUILD_GRADLE"
     sed -i '' "s/versionCode = [0-9]*/versionCode = $new_version_code/" "$BUILD_GRADLE"
-    
+
     log_success "Updated version to $new_version (code: $new_version_code)"
 }
 
@@ -121,15 +131,15 @@ update_changelog() {
     local version="$1"
     local release_notes="$2"
     local date=$(date +%Y-%m-%d)
-    
+
     log_info "Updating $CHANGELOG..."
-    
+
     # Create backup
     cp "$CHANGELOG" "$CHANGELOG$BACKUP_SUFFIX"
-    
+
     # Create temporary file with new entry
     local temp_file=$(mktemp)
-    
+
     # Read changelog and insert new version after [Unreleased]
     awk -v version="$version" -v date="$date" -v notes="$release_notes" '
     /## \[Unreleased\]/ {
@@ -160,7 +170,7 @@ update_changelog() {
     {
         print $0
     }' "$CHANGELOG" > "$temp_file"
-    
+
     mv "$temp_file" "$CHANGELOG"
     log_success "Added changelog entry for version $version"
 }
@@ -168,22 +178,22 @@ update_changelog() {
 # Update version in README.md
 update_readme() {
     local version="$1"
-    
+
     log_info "Updating $README version..."
-    
+
     # Create backup
     cp "$README" "$README$BACKUP_SUFFIX"
-    
+
     # Update version in README.md
     sed -i '' "s/\*\*Version:\*\* [0-9]*\.[0-9]*\.[0-9]*/\*\*Version:\*\* $version/" "$README"
-    
+
     log_success "Updated README.md version to $version"
 }
 
 # Build and test
 build_and_test() {
     log_info "Building and testing..."
-    
+
     if ./gradlew assembleDebug assembleRelease; then
         log_success "Build completed successfully"
     else
@@ -196,17 +206,17 @@ build_and_test() {
 # Rollback changes if something goes wrong
 rollback_changes() {
     log_warning "Rolling back changes..."
-    
+
     if [ -f "$BUILD_GRADLE$BACKUP_SUFFIX" ]; then
         mv "$BUILD_GRADLE$BACKUP_SUFFIX" "$BUILD_GRADLE"
         log_success "Restored $BUILD_GRADLE"
     fi
-    
+
     if [ -f "$CHANGELOG$BACKUP_SUFFIX" ]; then
         mv "$CHANGELOG$BACKUP_SUFFIX" "$CHANGELOG"
         log_success "Restored $CHANGELOG"
     fi
-    
+
     if [ -f "$README$BACKUP_SUFFIX" ]; then
         mv "$README$BACKUP_SUFFIX" "$README"
         log_success "Restored $README"
@@ -228,14 +238,14 @@ check_github_cli() {
         log_info "  or visit: https://cli.github.com/"
         exit 1
     fi
-    
+
     # Check if authenticated
     if ! gh auth status &> /dev/null; then
         log_error "GitHub CLI is not authenticated. Please run:"
         log_info "  gh auth login"
         exit 1
     fi
-    
+
     # Test GitHub API access
     if ! gh api user &> /dev/null; then
         log_error "GitHub API access failed. Please check your authentication:"
@@ -250,16 +260,16 @@ manage_release_branch() {
     local is_hotfix="$2"
     local branch_name="release/v$version"
     local base_version
-    
+
     if [ "$is_hotfix" = true ]; then
         # For hotfix, find existing release branch for base version
         base_version=$(echo "$version" | sed 's/\.[0-9]*$//')  # Remove patch number
         local existing_branch="release/v${base_version}.0"
-        
+
         if git show-ref --verify --quiet "refs/heads/$existing_branch"; then
             log_info "Checking out existing release branch: $existing_branch"
             git checkout "$existing_branch"
-            
+
             # Create hotfix branch from release branch
             branch_name="release/v$version"
             log_info "Creating hotfix branch: $branch_name"
@@ -275,17 +285,21 @@ manage_release_branch() {
         git pull origin "$MAIN_BRANCH"
         git checkout -b "$branch_name"
     fi
-    
+
     echo "$branch_name"
 }
 
-# Build APKs for release
-build_release_apks() {
-    log_info "Building release APKs..."
-    
-    # Clean and build
-    ./gradlew clean assembleDebug assembleRelease
-    
+# Build APKs and AABs for release
+build_release_artifacts() {
+    local version="$1"
+    log_info "Building release APKs and AABs..."
+
+    # Set up dynamic file paths based on version
+    get_build_artifact_paths "$version"
+
+    # Clean and build both APKs and AABs
+    ./gradlew clean assembleDebug assembleRelease bundleDebug bundleRelease
+
     # Verify APKs exist
     if [ ! -f "$APK_DEBUG_PATH" ] || [ ! -f "$APK_RELEASE_PATH" ]; then
         log_error "APK build failed - files not found!"
@@ -293,13 +307,27 @@ build_release_apks() {
         log_error "Expected: $APK_RELEASE_PATH"
         exit 1
     fi
-    
-    # Show APK info
-    local debug_size=$(ls -lh "$APK_DEBUG_PATH" | awk '{print $5}')
-    local release_size=$(ls -lh "$APK_RELEASE_PATH" | awk '{print $5}')
-    
-    log_success "Debug APK: $debug_size"
-    log_success "Release APK: $release_size"
+
+    # Verify AABs exist
+    if [ ! -f "$AAB_DEBUG_PATH" ] || [ ! -f "$AAB_RELEASE_PATH" ]; then
+        log_error "AAB build failed - files not found!"
+        log_error "Expected: $AAB_DEBUG_PATH"
+        log_error "Expected: $AAB_RELEASE_PATH"
+        exit 1
+    fi
+
+    # Show build artifacts info
+    local apk_debug_size=$(ls -lh "$APK_DEBUG_PATH" | awk '{print $5}')
+    local apk_release_size=$(ls -lh "$APK_RELEASE_PATH" | awk '{print $5}')
+    local aab_debug_size=$(ls -lh "$AAB_DEBUG_PATH" | awk '{print $5}')
+    local aab_release_size=$(ls -lh "$AAB_RELEASE_PATH" | awk '{print $5}')
+
+    log_success "📱 APKs Built:"
+    log_success "  Debug APK: $apk_debug_size"
+    log_success "  Release APK: $apk_release_size"
+    log_success "📦 AABs Built:"
+    log_success "  Debug AAB: $aab_debug_size"
+    log_success "  Release AAB: $aab_release_size"
 }
 
 # Create GitHub release
@@ -307,9 +335,18 @@ create_github_release() {
     local version="$1"
     local release_notes="$2"
     local is_hotfix="$3"
-    
+
     log_info "Creating GitHub release v$version..."
-    
+
+    # Set up dynamic file paths based on version
+    get_build_artifact_paths "$version"
+
+    # Get app name dynamically
+    local app_name=$(grep "rootProject.name" settings.gradle.kts 2>/dev/null | sed 's/.*"\(.*\)".*/\1/' | tr -d ' ')
+    if [ -z "$app_name" ]; then
+        app_name="MassPing"  # Fallback if rootProject.name not found
+    fi
+
     # Prepare release notes
     local full_notes="$release_notes"
     if [ "$is_hotfix" = true ]; then
@@ -319,9 +356,9 @@ $release_notes
 
 ---
 
-**Installation:**
-- Download \`app-release.apk\` for production use
-- Download \`app-debug.apk\` for testing/debugging
+**Installation Options:**
+- 📱 **APK Files** (Direct install): Download \`${app_name}-v$version-release.apk\` or \`${app_name}-v$version-debug.apk\`
+- 📦 **AAB Files** (Google Play): Download \`${app_name}-v$version-release.aab\` for Play Store submission
 
 **What's Changed:**
 See [CHANGELOG.md](https://github.com/$GITHUB_REPO/blob/v$version/CHANGELOG.md) for detailed changes.
@@ -334,41 +371,51 @@ $release_notes
 
 ---
 
-**Installation:**
-- Download \`app-release.apk\` for production use  
-- Download \`app-debug.apk\` for testing/debugging
+**Installation Options:**
+- 📱 **APK Files** (Direct install): Download \`${app_name}-v$version-release.apk\` or \`${app_name}-v$version-debug.apk\`
+- 📦 **AAB Files** (Google Play): Download \`${app_name}-v$version-release.aab\` for Play Store submission
 
 **What's Changed:**
 See [CHANGELOG.md](https://github.com/$GITHUB_REPO/blob/v$version/CHANGELOG.md) for detailed changes.
 
 **Full Changelog:** https://github.com/$GITHUB_REPO/compare/v$(get_previous_version)...v$version"
     fi
-    
-    # Verify APK files exist before creating release
-    if [ ! -f "$APK_RELEASE_PATH" ]; then
-        log_error "Release APK not found: $APK_RELEASE_PATH"
+
+    # Verify all build artifacts exist before creating release
+    local missing_files=()
+
+    [ ! -f "$APK_RELEASE_PATH" ] && missing_files+=("Release APK: $APK_RELEASE_PATH")
+    [ ! -f "$APK_DEBUG_PATH" ] && missing_files+=("Debug APK: $APK_DEBUG_PATH")
+    [ ! -f "$AAB_RELEASE_PATH" ] && missing_files+=("Release AAB: $AAB_RELEASE_PATH")
+    [ ! -f "$AAB_DEBUG_PATH" ] && missing_files+=("Debug AAB: $AAB_DEBUG_PATH")
+
+    if [ ${#missing_files[@]} -ne 0 ]; then
+        log_error "Build artifacts missing:"
+        for file in "${missing_files[@]}"; do
+            log_error "  $file"
+        done
         return 1
     fi
-    
-    if [ ! -f "$APK_DEBUG_PATH" ]; then
-        log_error "Debug APK not found: $APK_DEBUG_PATH"
-        return 1
-    fi
-    
-    # Create release with APK uploads (target the current branch where tag was created)
-    log_info "Uploading APKs to GitHub release..."
+
+    # Create release with both APK and AAB uploads
+    log_info "Uploading APKs and AABs to GitHub release..."
     if gh release create "v$version" \
-        "$APK_RELEASE_PATH#MassPing-v$version-release.apk" \
-        "$APK_DEBUG_PATH#MassPing-v$version-debug.apk" \
-        --title "MassPing v$version" \
+        "$APK_RELEASE_PATH#${app_name}-v$version-release.apk" \
+        "$APK_DEBUG_PATH#${app_name}-v$version-debug.apk" \
+        "$AAB_RELEASE_PATH#${app_name}-v$version-release.aab" \
+        "$AAB_DEBUG_PATH#${app_name}-v$version-debug.aab" \
+        --title "$app_name v$version" \
         --notes "$full_notes" \
         --draft=false \
         --latest; then
-        
+
         log_success "GitHub release created: https://github.com/$GITHUB_REPO/releases/tag/v$version"
-        log_info "APK downloads available:"
-        log_info "  Release: https://github.com/$GITHUB_REPO/releases/download/v$version/MassPing-v$version-release.apk"
-        log_info "  Debug: https://github.com/$GITHUB_REPO/releases/download/v$version/MassPing-v$version-debug.apk"
+        log_info "📱 APK Downloads (Direct Install):"
+        log_info "  Release: https://github.com/$GITHUB_REPO/releases/download/v$version/${app_name}-v$version-release.apk"
+        log_info "  Debug: https://github.com/$GITHUB_REPO/releases/download/v$version/${app_name}-v$version-debug.apk"
+        log_info "📦 AAB Downloads (Google Play Store):"
+        log_info "  Release: https://github.com/$GITHUB_REPO/releases/download/v$version/${app_name}-v$version-release.aab"
+        log_info "  Debug: https://github.com/$GITHUB_REPO/releases/download/v$version/${app_name}-v$version-debug.aab"
         return 0
     else
         log_error "Failed to create GitHub release"
@@ -386,26 +433,26 @@ get_previous_version() {
 merge_release_to_main() {
     local version="$1"
     local branch_name="release/v$version"
-    
+
     log_info "Merging release branch to main..."
-    
+
     git checkout "$MAIN_BRANCH"
     git pull origin "$MAIN_BRANCH"
     git merge --no-ff "$branch_name" -m "Merge release v$version"
-    
+
     # Push main branch
     git push origin "$MAIN_BRANCH"
-    
+
     # Push release branch for future hotfixes
     git push origin "$branch_name"
-    
+
     log_success "Release branch merged and pushed"
 }
 
 # Push git tag
 push_git_tag() {
     local version="$1"
-    
+
     log_info "Pushing git tag v$version..."
     git push origin "v$version"
     log_success "Tag pushed to GitHub"
@@ -415,12 +462,12 @@ push_git_tag() {
 create_git_release() {
     local version="$1"
     local release_notes="$2"
-    
+
     log_info "Creating git commit and tag..."
-    
+
     # Add files to git
     git add "$BUILD_GRADLE" "$CHANGELOG"
-    
+
     # Commit changes
     local commit_message="Release v$version"
     if [ -n "$release_notes" ]; then
@@ -432,12 +479,12 @@ $release_notes
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
     fi
-    
+
     git commit -m "$commit_message"
-    
+
     # Create git tag
     git tag -a "v$version" -m "Release v$version"
-    
+
     log_success "Created commit and tag v$version"
     log_info "To push: git push origin main && git push origin v$version"
 }
@@ -449,12 +496,18 @@ main() {
         log_error "Could not find $BUILD_GRADLE. Please run this script from the project root."
         exit 1
     fi
-    
+
+    # Get app name dynamically
+    local app_name=$(grep "rootProject.name" settings.gradle.kts 2>/dev/null | sed 's/.*"\(.*\)".*/\1/' | tr -d ' ')
+    if [ -z "$app_name" ]; then
+        app_name="MassPing"  # Fallback if rootProject.name not found
+    fi
+
     # Parse arguments
     local bump_type="$1"
     local release_notes="$2"
     local is_hotfix=false
-    
+
     # Check for hotfix flag
     if [ "$3" = "--hotfix" ] || [ "$2" = "--hotfix" ]; then
         is_hotfix=true
@@ -462,38 +515,38 @@ main() {
             release_notes="$3"
         fi
     fi
-    
+
     if [ -z "$bump_type" ]; then
         show_usage
         exit 1
     fi
-    
+
     # Validate bump type
     if [[ ! "$bump_type" =~ ^(patch|minor|major)$ ]]; then
         log_error "Invalid bump type: $bump_type"
         show_usage
         exit 1
     fi
-    
+
     # Check prerequisites
     check_github_cli
-    
+
     # Get current version info
     local version_info=$(get_current_version)
     local current_version=$(echo "$version_info" | cut -d: -f1)
     local current_version_code=$(echo "$version_info" | cut -d: -f2)
-    
+
     log_info "Current version: $current_version (code: $current_version_code)"
-    
+
     # Calculate next version
     local new_version=$(calculate_next_version "$current_version" "$bump_type")
     local new_version_code=$((current_version_code + 1))
-    
+
     log_info "New version: $new_version (code: $new_version_code)"
     if [ "$is_hotfix" = true ]; then
         log_warning "🔥 HOTFIX RELEASE"
     fi
-    
+
     # Confirm with user
     if [ -t 0 ]; then  # Check if running interactively
         echo -n "Proceed with release? (y/N): "
@@ -503,18 +556,18 @@ main() {
             exit 0
         fi
     fi
-    
+
     # Store original branch
     local original_branch=$(git symbolic-ref --short HEAD)
-    
+
     # Create/switch to release branch
     local release_branch=$(manage_release_branch "$new_version" "$is_hotfix")
-    
+
     # Update files on release branch
     update_build_gradle "$new_version" "$new_version_code"
     update_changelog "$new_version" "$release_notes"
     update_readme "$new_version"
-    
+
     # Commit changes to release branch
     git add "$BUILD_GRADLE" "$CHANGELOG" "$README"
     git commit -m "Release v$new_version
@@ -524,20 +577,20 @@ $release_notes
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
-    
+
     # Create git tag
     git tag -a "v$new_version" -m "Release v$new_version"
-    
+
     # Push the release branch first (needed for GitHub release)
     log_info "Pushing release branch to GitHub..."
     git push origin "$release_branch"
-    
+
     # Push tag to GitHub
     push_git_tag "$new_version"
-    
-    # Build APKs
-    build_release_apks
-    
+
+    # Build APKs and AABs
+    build_release_artifacts "$new_version"
+
     # Create GitHub release with APK uploads
     if create_github_release "$new_version" "$release_notes" "$is_hotfix"; then
         log_success "GitHub release published!"
@@ -545,7 +598,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
         log_error "Failed to create GitHub release"
         # Continue anyway - we can create it manually
     fi
-    
+
     # Merge release branch to main (unless it's a hotfix from an old release)
     if [ "$is_hotfix" != true ] || [[ "$new_version" =~ ^$(echo "$current_version" | sed 's/\.[0-9]*$//').*$ ]]; then
         merge_release_to_main "$new_version"
@@ -554,10 +607,10 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
         git push origin "$release_branch"
         log_info "Hotfix branch pushed. Manual merge to main may be needed."
     fi
-    
+
     # Clean up
     cleanup_backups
-    
+
     log_success "🎉 Release v$new_version completed successfully!"
     echo ""
     echo "✅ What was done:"
@@ -565,15 +618,16 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     echo "  • Updated version to $new_version (code: $new_version_code)"
     echo "  • Updated CHANGELOG.md with release notes"
     echo "  • Updated README.md version"
-    echo "  • Built and tested APKs"
+    echo "  • Built and tested APKs and AABs"
     echo "  • Created GitHub release: https://github.com/$GITHUB_REPO/releases/tag/v$new_version"
-    echo "  • Uploaded APK files to GitHub"
+    echo "  • Uploaded APK and AAB files to GitHub"
     if [ "$is_hotfix" != true ]; then
         echo "  • Merged to main branch"
     fi
     echo ""
-    echo "📱 APK Downloads:"
-    echo "  https://github.com/$GITHUB_REPO/releases/download/v$new_version/MassPing-v$new_version-release.apk"
+    echo "📦 Downloads:"
+    echo "  APK (Direct Install): https://github.com/$GITHUB_REPO/releases/download/v$new_version/${app_name}-v$new_version-release.apk"
+    echo "  AAB (Google Play): https://github.com/$GITHUB_REPO/releases/download/v$new_version/${app_name}-v$new_version-release.aab"
 }
 
 # Run main function

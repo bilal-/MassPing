@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.bilalahmad.massping.data.models.IndividualMessageStatus
 import dev.bilalahmad.massping.data.models.Message
+import dev.bilalahmad.massping.ui.components.MessageHistoryItem
 import dev.bilalahmad.massping.ui.viewmodels.MainViewModel
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -39,6 +40,7 @@ import java.util.Locale
 fun MessagesScreen(viewModel: MainViewModel) {
     val messages by viewModel.messages.collectAsState()
     val individualMessages by viewModel.individualMessages.collectAsState()
+    val messageHistory by viewModel.messageHistory.collectAsState(initial = emptyList())
 
     Scaffold(
         topBar = {
@@ -53,7 +55,7 @@ fun MessagesScreen(viewModel: MainViewModel) {
             )
         }
     ) { paddingValues ->
-        if (messages.isEmpty()) {
+        if (messages.isEmpty() && messageHistory.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -86,12 +88,38 @@ fun MessagesScreen(viewModel: MainViewModel) {
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                items(messages.sortedByDescending { it.createdAt }) { message ->
-                    MessageItem(
-                        message = message,
-                        individualMessages = individualMessages[message.id] ?: emptyList(),
-                        onSendMessage = { viewModel.sendMessage(message.id) }
-                    )
+                // Current pending messages
+                if (messages.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Current Messages",
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(16.dp),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    items(messages.sortedByDescending { it.createdAt }) { message ->
+                        MessageItem(
+                            message = message,
+                            individualMessages = individualMessages[message.id] ?: emptyList(),
+                            onSendMessage = { viewModel.sendMessage(message.id) }
+                        )
+                    }
+                }
+
+                // Message History
+                if (messageHistory.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "Message History",
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(16.dp),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                    items(messageHistory) { historyItem ->
+                        MessageHistoryItem(messageHistory = historyItem)
+                    }
                 }
             }
         }
@@ -145,11 +173,14 @@ private fun MessageItem(
                 }
 
                 if (individualMessages.isNotEmpty()) {
+                    val isSending = individualMessages.any { it.status == IndividualMessageStatus.SENDING }
+                    val hasPending = individualMessages.any { it.status == IndividualMessageStatus.PENDING }
+
                     Button(
                         onClick = onSendMessage,
-                        enabled = individualMessages.any { it.status == IndividualMessageStatus.PENDING }
+                        enabled = hasPending && !isSending
                     ) {
-                        Text("Send")
+                        Text(if (isSending) "Sending..." else "Send")
                     }
                 }
             }
@@ -158,7 +189,7 @@ private fun MessageItem(
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val sentCount = individualMessages.count {
-                    it.status == IndividualMessageStatus.SENT
+                    it.status == IndividualMessageStatus.SENT || it.status == IndividualMessageStatus.DELIVERED
                 }
                 val deliveredCount = individualMessages.count {
                     it.status == IndividualMessageStatus.DELIVERED
@@ -166,9 +197,11 @@ private fun MessageItem(
                 val failedCount = individualMessages.count {
                     it.status == IndividualMessageStatus.FAILED
                 }
-                val pendingCount = individualMessages.count {
-                    it.status == IndividualMessageStatus.PENDING ||
+                val sendingCount = individualMessages.count {
                     it.status == IndividualMessageStatus.SENDING
+                }
+                val pendingCount = individualMessages.count {
+                    it.status == IndividualMessageStatus.PENDING
                 }
 
                 // Progress indicators
@@ -178,17 +211,17 @@ private fun MessageItem(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            "Sent: $sentCount, Delivered: $deliveredCount/${individualMessages.size}",
+                            "Sent: $sentCount/${individualMessages.size}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         Text(
-                            "${((sentCount + deliveredCount).toFloat() / individualMessages.size * 100).toInt()}%",
+                            "${(sentCount.toFloat() / individualMessages.size * 100).toInt()}%",
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
 
                     LinearProgressIndicator(
-                        progress = (sentCount + deliveredCount).toFloat() / individualMessages.size,
+                        progress = sentCount.toFloat() / individualMessages.size,
                         modifier = Modifier.fillMaxWidth()
                     )
 
@@ -198,11 +231,11 @@ private fun MessageItem(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        if (failedCount > 0) {
+                        if (sendingCount > 0) {
                             Text(
-                                "Failed: $failedCount",
+                                "Sending: $sendingCount",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
 
@@ -213,6 +246,24 @@ private fun MessageItem(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
+
+                        if (failedCount > 0) {
+                            Text(
+                                "Failed: $failedCount",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    // Delivery status (best effort)
+                    if (deliveredCount > 0) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Delivered: $deliveredCount (Best effort - SMS delivery receipts not guaranteed)",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
             }

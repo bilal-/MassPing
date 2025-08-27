@@ -38,6 +38,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val individualMessages = repository.individualMessages
     val availableAccounts = repository.availableAccounts
     val selectedAccounts = repository.selectedAccounts
+    val messageHistory = repository.messageHistory
     init {
         Log.d(TAG, "MainViewModel init block executing")
 
@@ -118,12 +119,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    suspend fun getMessageHistoryStats(): Triple<Int, Int, Int> {
+        return repository.getMessageHistoryStats()
+    }
+
     fun getAvailablePlaceholders(): List<String> {
         return repository.getAvailablePlaceholders()
     }
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
+    }
+
+    fun clearCompletedMessages() {
+        repository.clearCompletedMessages()
     }
 
     override fun onCleared() {

@@ -16,7 +16,7 @@ A powerful Android application for sending personalized bulk SMS messages to you
 - **📋 Contact Groups Support** - Organize and message entire contact groups
 - **✨ Message Personalization** - Use placeholders like `{name}`, `{nickname}`, `{firstname}` for personalized messages
 - **📊 Message Preview** - Preview personalized messages before sending
-- **📈 Delivery Tracking** - Monitor message delivery status and progress
+- **📈 Delivery Tracking** - Monitor message sending status and delivery progress (best effort)
 - **🔄 Background Processing** - Send messages in the background with foreground service
 
 ### User Experience
@@ -28,7 +28,7 @@ A powerful Android application for sending personalized bulk SMS messages to you
 
 ### Technical Features
 - **🏗️ MVVM Architecture** - Clean architecture with ViewModels and Repository pattern
-- **💾 Local Database** - Room database for offline message storage
+- **💾 Local Database** - Room database for message history and persistent storage
 - **🔄 Coroutines** - Asynchronous operations with Kotlin Coroutines
 - **🎯 Permission Management** - Smart permission handling for SMS and contacts
 - **🛡️ Error Handling** - Comprehensive error handling and user feedback
@@ -76,7 +76,7 @@ A powerful Android application for sending personalized bulk SMS messages to you
 1. **Android Studio** - Latest stable version
 2. **Java 21** - For development and compilation
 3. **Google Console Account** - For Google People API access
-4. **Physical Android Device** - For SMS testing (emulator can't send real SMS)
+4. **Physical Android Device** - Recommended for SMS testing (emulator has limited SMS functionality)
 
 ### Installation
 
@@ -134,6 +134,11 @@ A powerful Android application for sending personalized bulk SMS messages to you
 4. **Preview messages** to see personalized content
 5. **Send** - Messages will be sent in the background with progress tracking
 
+### Emulator Support
+- **Development**: App works on emulators with timeout-based status updates
+- **Production**: Best experience on physical devices with full SMS broadcast support
+- **Testing**: Emulator shows simulated progress after 10-second timeout
+
 ### Managing Contacts
 - **View contacts** from both Google and device storage
 - **Create contact groups** for easier bulk messaging
@@ -146,9 +151,9 @@ app/src/main/java/dev/bilalahmad/massping/
 ├── MainActivity.kt                 # Main application entry point
 ├── data/
 │   ├── database/                  # Room database implementation
-│   │   ├── MessageDao.kt         # Database access object
-│   │   ├── MessageDatabase.kt    # Database configuration
-│   │   └── MessageEntities.kt    # Database entities
+│   │   ├── MessageHistoryDao.kt  # Message history data access
+│   │   ├── MassPingDatabase.kt   # Database configuration
+│   │   └── MessageHistory.kt     # Message history entity
 │   ├── models/                   # Data models
 │   │   ├── Contact.kt           # Contact data model
 │   │   ├── ContactGroup.kt      # Contact group model
@@ -156,17 +161,18 @@ app/src/main/java/dev/bilalahmad/massping/
 │   ├── repository/              # Repository pattern implementation
 │   │   └── MassPingRepository.kt # Main data repository
 │   └── services/                # Background services
-│       ├── BackgroundSmsService.kt      # SMS sending service
-│       ├── GoogleContactsService.kt     # Google API integration
+│       ├── BackgroundSmsService.kt      # SMS background service
+│       ├── NativeContactsService.kt     # Android contacts integration
 │       ├── MessagePersonalizationService.kt # Message personalization
 │       └── SmsService.kt               # SMS functionality
 ├── ui/                          # User interface components
 │   ├── MassPingApp.kt          # Main app composition
 │   ├── components/             # Reusable UI components
+│   │   └── MessageHistoryItem.kt # Message history display
 │   ├── screens/                # App screens
 │   │   ├── ContactsScreen.kt   # Contacts management
 │   │   ├── LoginScreen.kt      # Google Sign-In
-│   │   ├── MessagesScreen.kt   # Message history
+│   │   ├── MessagesScreen.kt   # Message history and tracking
 │   │   └── NewMessageScreen.kt # Message composition
 │   ├── theme/                  # Material 3 theming
 │   ├── utils/                  # UI utilities

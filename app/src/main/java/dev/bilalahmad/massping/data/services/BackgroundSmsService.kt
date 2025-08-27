@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import dev.bilalahmad.massping.data.models.IndividualMessage
@@ -40,7 +41,12 @@ class BackgroundSmsService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_START_SENDING -> {
-                val messages = intent.getParcelableArrayListExtra<IndividualMessage>(EXTRA_MESSAGES)
+                val messages = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableArrayListExtra(EXTRA_MESSAGES, IndividualMessage::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableArrayListExtra<IndividualMessage>(EXTRA_MESSAGES)
+                }
                 val messageId = intent.getStringExtra(EXTRA_MESSAGE_ID)
 
                 if (messages != null && messageId != null) {

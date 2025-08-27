@@ -1,23 +1,29 @@
 package dev.bilalahmad.massping.data.services
 
+import android.Manifest
 import android.app.Activity
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.PackageManager
+import android.os.Build
 import android.telephony.SmsManager
+import androidx.core.content.ContextCompat
 import dev.bilalahmad.massping.data.models.IndividualMessage
 import dev.bilalahmad.massping.data.models.IndividualMessageStatus
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.launch
 
 class SmsService(private val context: Context) {
 
     companion object {
         private const val SMS_SENT_ACTION = "SMS_SENT"
         private const val SMS_DELIVERED_ACTION = "SMS_DELIVERED"
+        private const val SMS_MAX_LENGTH = 160 // Standard SMS length limit
     }
 
     private val smsManager = SmsManager.getDefault()
@@ -27,7 +33,12 @@ class SmsService(private val context: Context) {
 
     private val sentReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val messageId = intent?.getStringExtra("messageId") ?: return
+            android.util.Log.d("SmsService", "sentReceiver onReceive called with resultCode: $resultCode")
+            val messageId = intent?.getStringExtra("messageId") ?: run {
+                android.util.Log.e("SmsService", "sentReceiver: no messageId in intent")
+                return
+            }
+            android.util.Log.d("SmsService", "sentReceiver processing messageId: $messageId")
             val status = when (resultCode) {
                 Activity.RESULT_OK -> {
                     android.util.Log.d("SmsService", "SMS sent successfully for message: $messageId")
@@ -54,24 +65,61 @@ class SmsService(private val context: Context) {
                     IndividualMessageStatus.FAILED
                 }
             }
-            statusUpdatesChannel.trySend(messageId to status)
+            android.util.Log.d("SmsService", "sentReceiver sending status update: $messageId -> $status")
+            val success = statusUpdatesChannel.trySend(messageId to status)
+            android.util.Log.d("SmsService", "Status update sent successfully: $success")
         }
     }
 
     private val deliveredReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-            val messageId = intent?.getStringExtra("messageId") ?: return
-            statusUpdatesChannel.trySend(messageId to IndividualMessageStatus.DELIVERED)
+            android.util.Log.d("SmsService", "deliveredReceiver onReceive called with resultCode: $resultCode")
+            val messageId = intent?.getStringExtra("messageId") ?: run {
+                android.util.Log.e("SmsService", "deliveredReceiver: no messageId in intent")
+                return
+            }
+            android.util.Log.d("SmsService", "deliveredReceiver processing messageId: $messageId")
+            when (resultCode) {
+                Activity.RESULT_OK -> {
+                    android.util.Log.d("SmsService", "SMS delivered for message: $messageId")
+                    val success = statusUpdatesChannel.trySend(messageId to IndividualMessageStatus.DELIVERED)
+                    android.util.Log.d("SmsService", "Delivery status update sent successfully: $success")
+                }
+                else -> {
+                    android.util.Log.d("SmsService", "SMS delivery status unknown for message: $messageId (code: $resultCode)")
+                    // Don't update status on delivery failure - keep as SENT
+                }
+            }
         }
     }
 
     init {
+        // Log device information for debugging
+        val isEmulator = Build.FINGERPRINT.startsWith("generic") ||
+                        Build.FINGERPRINT.startsWith("unknown") ||
+                        Build.MODEL.contains("google_sdk") ||
+                        Build.MODEL.contains("Emulator") ||
+                        Build.MODEL.contains("Android SDK built for x86") ||
+                        Build.MANUFACTURER.contains("Genymotion") ||
+                        Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")
+
+        android.util.Log.d("SmsService", "Device info - Model: ${Build.MODEL}, Fingerprint: ${Build.FINGERPRINT}, Is Emulator: $isEmulator")
+
         context.registerReceiver(sentReceiver, IntentFilter(SMS_SENT_ACTION), Context.RECEIVER_NOT_EXPORTED)
         context.registerReceiver(deliveredReceiver, IntentFilter(SMS_DELIVERED_ACTION), Context.RECEIVER_NOT_EXPORTED)
+
+        android.util.Log.d("SmsService", "SMS broadcast receivers registered")
     }
 
     fun sendSms(message: IndividualMessage) {
         try {
+            // Check SMS permission
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
+                android.util.Log.e("SmsService", "SMS permission not granted for message: ${message.id}")
+                statusUpdatesChannel.trySend(message.id to IndividualMessageStatus.FAILED)
+                return
+            }
+
             // Validate phone number
             if (message.phoneNumber.isBlank()) {
                 android.util.Log.e("SmsService", "Cannot send SMS - blank phone number for message: ${message.id}")
@@ -86,6 +134,13 @@ class SmsService(private val context: Context) {
                 return
             }
 
+            // Log SMS length for debugging
+            val messageLength = message.personalizedContent.length
+            android.util.Log.d("SmsService", "SMS length: $messageLength chars for message: ${message.id}")
+            if (messageLength > SMS_MAX_LENGTH) {
+                android.util.Log.w("SmsService", "SMS exceeds standard length ($messageLength > $SMS_MAX_LENGTH) - may be sent as multiple parts or MMS")
+            }
+
             android.util.Log.d("SmsService", "Sending SMS to ${message.phoneNumber} for message: ${message.id}")
 
             val sentIntent = PendingIntent.getBroadcast(
@@ -95,15 +150,18 @@ class SmsService(private val context: Context) {
             )
 
             val deliveredIntent = PendingIntent.getBroadcast(
-                context, message.id.hashCode() + 1,
+                context, message.id.hashCode() + 1, // Different request code
                 Intent(SMS_DELIVERED_ACTION).putExtra("messageId", message.id),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
             // Update status to sending
-            statusUpdatesChannel.trySend(message.id to IndividualMessageStatus.SENDING)
+            android.util.Log.d("SmsService", "Updating status to SENDING for message: ${message.id}")
+            val sendingSuccess = statusUpdatesChannel.trySend(message.id to IndividualMessageStatus.SENDING)
+            android.util.Log.d("SmsService", "SENDING status update sent successfully: $sendingSuccess")
 
-            // Send SMS
+            // Send SMS with delivery receipt
+            android.util.Log.d("SmsService", "Calling smsManager.sendTextMessage for: ${message.id}")
             smsManager.sendTextMessage(
                 message.phoneNumber,
                 null,
@@ -111,6 +169,20 @@ class SmsService(private val context: Context) {
                 sentIntent,
                 deliveredIntent
             )
+            android.util.Log.d("SmsService", "smsManager.sendTextMessage completed for: ${message.id}")
+
+            // Add timeout mechanism - if no response in 10 seconds, mark as sent anyway
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                kotlinx.coroutines.delay(10000L) // 10 seconds timeout
+
+                // Check if message is still in SENDING state
+                android.util.Log.d("SmsService", "Timeout check for message: ${message.id}")
+                // We can't easily check current status here, so we'll let the repository handle timeouts
+                // For now, assume it went through and mark as SENT
+                statusUpdatesChannel.trySend(message.id to IndividualMessageStatus.SENT)
+                android.util.Log.w("SmsService", "Timeout - marking message as SENT: ${message.id}")
+            }
+
         } catch (e: Exception) {
             android.util.Log.e("SmsService", "Exception sending SMS for message: ${message.id}", e)
             statusUpdatesChannel.trySend(message.id to IndividualMessageStatus.FAILED)

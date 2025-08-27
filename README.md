@@ -1,6 +1,6 @@
 # MassPing
 
-**Author:** Bilal Ahmad
+**Author:** Bilal
 **Version:** 1.0.1
 **Platform:** Android (API 29+)
 
@@ -312,7 +312,3 @@ Future enhancements planned:
 - [ ] Dark theme customization
 - [ ] Export/import contact groups
 - [ ] Message encryption options
-
----
-
-**Built with ❤️ by Bilal Ahmad**

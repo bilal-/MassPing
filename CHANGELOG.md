@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-08-27
+
+### Changed
+- Background sms sending and fix status tracking
+
+
 ### Added
 - Background SMS sending with foreground service and rich notifications
 - Configurable SMS settings with delay (1-30 seconds) and timeout (5-60 seconds) controls
@@ -90,7 +96,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Min SDK**: Android 10 (API 29)
 - **Target SDK**: Android 14 (API 36)
 
-[Unreleased]: https://github.com/bilal-/MassPing/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/bilal-/MassPing/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/bilal-/MassPing/releases/tag/v1.1.0
 [1.0.2]: https://github.com/bilal-/MassPing/releases/tag/v1.0.2
 [1.0.1]: https://github.com/bilal-/MassPing/releases/tag/v1.0.1
 [1.2.0]: https://github.com/bilal-/MassPing/releases/tag/v1.2.0

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Exact gradient from SVG splash design -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:startX="0"
+                android:startY="0"
+                android:endX="1"
+                android:endY="1"
+                android:startColor="#5dade2"
+                android:centerColor="#3498db"
+                android:endColor="#2980b9"
+                android:type="linear" />
+        </shape>
+    </item>
+    
+    <!-- Exact Splash Icon design from SVG -->
+    <item android:gravity="center">
+        <vector
+            android:width="200dp"
+            android:height="200dp"
+            android:viewportWidth="200"
+            android:viewportHeight="200">
+            
+            <!-- Exact signal waves from SVG splash design -->
+            <!-- Outermost wave -->
+            <path android:strokeColor="#ffffff"
+                android:strokeWidth="4"
+                android:strokeAlpha="0.5"
+                android:pathData="M 30,155 Q 30,35 100,35 Q 170,35 170,155" />
+            
+            <!-- Second wave -->
+            <path android:strokeColor="#ffffff"
+                android:strokeWidth="5"
+                android:strokeAlpha="0.7"
+                android:pathData="M 50,140 Q 50,60 100,60 Q 150,60 150,140" />
+            
+            <!-- Third wave -->
+            <path android:strokeColor="#ffffff"
+                android:strokeWidth="6"
+                android:strokeAlpha="0.9"
+                android:pathData="M 70,125 Q 70,85 100,85 Q 130,85 130,125" />
+            
+            <!-- Center antenna signal line -->
+            <path android:strokeColor="#ffffff"
+                android:strokeWidth="8"
+                android:pathData="M 100,140 L 100,115" />
+            
+            <!-- Center transmission dot -->
+            <path android:fillColor="#ffffff"
+                android:pathData="M100,155 m-10,0 a10,10 0 1,1 20,0 a10,10 0 1,1 -20,0" />
+            
+            <!-- Team member dots exactly as in SVG -->
+            <path android:fillColor="#ffffff"
+                android:fillAlpha="0.9"
+                android:pathData="M65,85 m-7,0 a7,7 0 1,1 14,0 a7,7 0 1,1 -14,0" />
+            <path android:fillColor="#ffffff"
+                android:fillAlpha="0.9"
+                android:pathData="M135,85 m-7,0 a7,7 0 1,1 14,0 a7,7 0 1,1 -14,0" />
+            <path android:fillColor="#ffffff"
+                android:fillAlpha="0.9"
+                android:pathData="M100,65 m-7,0 a7,7 0 1,1 14,0 a7,7 0 1,1 -14,0" />
+            <path android:fillColor="#ffffff"
+                android:fillAlpha="0.7"
+                android:pathData="M80,70 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+            <path android:fillColor="#ffffff"
+                android:fillAlpha="0.7"
+                android:pathData="M120,70 m-5,0 a5,5 0 1,1 10,0 a5,5 0 1,1 -10,0" />
+                
+        </vector>
+    </item>
+    
+</layer-list>

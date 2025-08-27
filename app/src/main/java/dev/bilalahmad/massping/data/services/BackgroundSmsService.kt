@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import dev.bilalahmad.massping.data.models.IndividualMessage
+import dev.bilalahmad.massping.data.repository.MassPingRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -28,13 +29,11 @@ class BackgroundSmsService : Service() {
         const val EXTRA_MESSAGE_ID = "message_id"
     }
 
-    private lateinit var smsService: SmsService
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
     private var sendingJob: Job? = null
 
     override fun onCreate() {
         super.onCreate()
-        smsService = SmsService(this)
         createNotificationChannel()
     }
 
@@ -69,31 +68,68 @@ class BackgroundSmsService : Service() {
 
     private fun startSendingMessages(messages: List<IndividualMessage>, messageId: String) {
         sendingJob = serviceScope.launch {
-            var sentCount = 0
+            val repository = MassPingRepository.getInstance(this@BackgroundSmsService)
             val totalCount = messages.size
 
-            messages.forEach { message ->
-                try {
-                    // Update notification with progress
-                    updateNotification("Sending message ${sentCount + 1} of $totalCount to ${message.contactName}")
+            // Get SMS settings from shared preferences
+            val sharedPrefs = getSharedPreferences("massping_preferences", MODE_PRIVATE)
+            val delaySeconds = sharedPrefs.getLong("sms_delay_seconds", 5L)
+            val timeoutSeconds = sharedPrefs.getLong("sms_timeout_seconds", 10L)
+            val delayMs = delaySeconds * 1000L
 
-                    // Send the SMS
-                    smsService.sendSms(message)
-                    sentCount++
+            // Track progress through repository's individualMessages flow
+            launch {
+                repository.individualMessages.collect { individualMessagesMap ->
+                    val currentMessages = individualMessagesMap[messageId] ?: emptyList()
+                    if (currentMessages.isNotEmpty()) {
+                        val sentCount = currentMessages.count {
+                            it.status == dev.bilalahmad.massping.data.models.IndividualMessageStatus.SENT ||
+                            it.status == dev.bilalahmad.massping.data.models.IndividualMessageStatus.DELIVERED
+                        }
+                        val failedCount = currentMessages.count {
+                            it.status == dev.bilalahmad.massping.data.models.IndividualMessageStatus.FAILED
+                        }
 
-                    // Delay between messages to prevent carrier throttling
-                    delay(2000L)
-
-                } catch (e: Exception) {
-                    // Log error but continue with next message
+                        updateProgressNotification(sentCount, failedCount, totalCount)
+                    }
                 }
             }
 
-            // Update final notification
-            updateNotification("Completed sending $sentCount of $totalCount messages")
+            messages.forEachIndexed { index, message ->
+                try {
+                    // Update notification with current sending status
+                    updateNotification("Sending ${index + 1} of $totalCount to ${message.contactName}")
 
-            // Stop service after a delay to show completion
-            delay(3000L)
+                    // Send the SMS through repository (single SmsService)
+                    repository.sendIndividualSms(message, timeoutSeconds)
+
+                    // Delay between messages using configurable delay
+                    if (index < messages.size - 1) { // Don't delay after the last message
+                        delay(delayMs)
+                    }
+
+                } catch (e: Exception) {
+                    android.util.Log.e("BackgroundSmsService", "Error sending SMS to ${message.contactName}", e)
+                }
+            }
+
+            // Wait for all messages to complete (sent/delivered/failed)
+            // Give extra time for all confirmations to come in
+            delay(timeoutSeconds * 1000L + 2000L)
+
+            // Update final notification with current status
+            val finalMessages = repository.individualMessages.value[messageId] ?: emptyList()
+            val finalSentCount = finalMessages.count {
+                it.status == dev.bilalahmad.massping.data.models.IndividualMessageStatus.SENT ||
+                it.status == dev.bilalahmad.massping.data.models.IndividualMessageStatus.DELIVERED
+            }
+            val finalFailedCount = finalMessages.count {
+                it.status == dev.bilalahmad.massping.data.models.IndividualMessageStatus.FAILED
+            }
+            updateCompletionNotification(finalSentCount, finalFailedCount, totalCount)
+
+            // Stop service after showing completion
+            delay(5000L)
             stopSelf()
         }
     }
@@ -133,11 +169,47 @@ class BackgroundSmsService : Service() {
         notificationManager.notify(NOTIFICATION_ID, notification)
     }
 
+    private fun updateProgressNotification(sentCount: Int, failedCount: Int, totalCount: Int) {
+        val progress = sentCount + failedCount
+        val percentage = if (totalCount > 0) (progress * 100) / totalCount else 0
+
+        val title = "MassPing - Sending Messages ($percentage%)"
+        val content = "Sent: $sentCount | Failed: $failedCount | Remaining: ${totalCount - progress}"
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_email)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setOngoing(true)
+            .setProgress(totalCount, progress, false)
+            .build()
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+
+    private fun updateCompletionNotification(sentCount: Int, failedCount: Int, totalCount: Int) {
+        val successRate = if (totalCount > 0) (sentCount * 100) / totalCount else 0
+        val title = "MassPing - Completed"
+        val content = "✅ $sentCount sent | ❌ $failedCount failed | $successRate% success rate"
+
+        val notification = NotificationCompat.Builder(this, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.ic_dialog_email)
+            .setContentTitle(title)
+            .setContentText(content)
+            .setOngoing(false)
+            .setAutoCancel(true)
+            .build()
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(NOTIFICATION_ID, notification)
+    }
+
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
         super.onDestroy()
         serviceScope.cancel()
-        smsService.cleanup()
     }
 }

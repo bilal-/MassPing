@@ -25,7 +25,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         Log.d(TAG, "MainViewModel created")
     }
 
-    private val repository = MassPingRepository(application)
+    private val repository = MassPingRepository.getInstance(application)
 
     // UI State
     private val _uiState = MutableStateFlow(MainUiState())
@@ -41,13 +41,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val messageHistory = repository.messageHistory
     init {
         Log.d(TAG, "MainViewModel init block executing")
-
-        // Listen for SMS status updates
-        viewModelScope.launch {
-            repository.smsStatusUpdates.collect { (messageId, status) ->
-                repository.updateIndividualMessageStatus(messageId, status)
-            }
-        }
+        // Repository handles its own SMS status updates
     }
 
     fun loadAvailableAccounts() {
@@ -134,6 +128,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun clearCompletedMessages() {
         repository.clearCompletedMessages()
     }
+
+    // SMS Settings
+    fun getSmsDelay(): Long = repository.getSmsDelay()
+    fun setSmsDelay(delaySeconds: Long) = repository.setSmsDelay(delaySeconds)
+
+    fun getSmsTimeout(): Long = repository.getSmsTimeout()
+    fun setSmsTimeout(timeoutSeconds: Long) = repository.setSmsTimeout(timeoutSeconds)
 
     override fun onCleared() {
         super.onCleared()

@@ -18,20 +18,23 @@ A powerful Android application for sending personalized bulk SMS messages to you
 - **📊 Message Preview** - Preview personalized messages before sending
 - **📈 Delivery Tracking** - Monitor message sending status and delivery progress (best effort)
 - **🔄 Background Processing** - Send messages in the background with foreground service
+- **⚙️ Configurable SMS Settings** - Adjust message delay (1-30s) and timeout (5-60s) to prevent carrier blocking
 
 ### User Experience
 - **🎨 Modern UI** - Built with Jetpack Compose and Material 3 design
 - **🔐 Google Sign-In** - Secure authentication with Google account
-- **⚡ Real-time Updates** - Live progress tracking and status updates
-- **🔔 Smart Notifications** - Progress notifications during bulk sending
+- **⚡ Real-time Updates** - Live progress tracking and status updates in both foreground and background
+- **🔔 Smart Notifications** - Rich progress notifications with percentage and status during bulk sending
 - **📱 Responsive Design** - Optimized for various screen sizes
+- **⚡ Immediate Responsiveness** - Send button responds instantly with real-time progress updates
 
 ### Technical Features
 - **🏗️ MVVM Architecture** - Clean architecture with ViewModels and Repository pattern
 - **💾 Local Database** - Room database for message history and persistent storage
-- **🔄 Coroutines** - Asynchronous operations with Kotlin Coroutines
+- **🔄 Coroutines** - Asynchronous operations with Kotlin Coroutines and StateFlow
 - **🎯 Permission Management** - Smart permission handling for SMS and contacts
 - **🛡️ Error Handling** - Comprehensive error handling and user feedback
+- **📡 Singleton Pattern** - Shared repository instance ensuring consistent state across UI and background service
 
 ## 🛠️ Technical Stack
 
@@ -132,12 +135,21 @@ A powerful Android application for sending personalized bulk SMS messages to you
    - `{nickname}` - Contact's nickname
    - `{firstname}` - Contact's first name
 4. **Preview messages** to see personalized content
-5. **Send** - Messages will be sent in the background with progress tracking
+5. **Adjust SMS settings** (optional) - Configure message delay and timeout in Settings
+6. **Send** - Messages will be sent in the background with real-time progress tracking
 
 ### Emulator Support
 - **Development**: App works on emulators with timeout-based status updates
 - **Production**: Best experience on physical devices with full SMS broadcast support
 - **Testing**: Emulator shows simulated progress after 10-second timeout
+
+### SMS Settings Configuration
+- **Message Delay**: Adjust time between SMS messages (1-30 seconds)
+  - Higher values prevent carrier blocking and Android bulk SMS warnings
+  - Recommended: 5-10 seconds for most carriers
+- **Timeout Settings**: Configure SMS delivery confirmation wait time (5-60 seconds)
+  - Useful for emulators or devices with limited SMS feedback
+  - Recommended: 10+ seconds for emulators, 5-15 seconds for devices
 
 ### Managing Contacts
 - **View contacts** from both Google and device storage
@@ -173,7 +185,8 @@ app/src/main/java/dev/bilalahmad/massping/
 │   │   ├── ContactsScreen.kt   # Contacts management
 │   │   ├── LoginScreen.kt      # Google Sign-In
 │   │   ├── MessagesScreen.kt   # Message history and tracking
-│   │   └── NewMessageScreen.kt # Message composition
+│   │   ├── NewMessageScreen.kt # Message composition
+│   │   └── SettingsScreen.kt   # SMS settings and configuration
 │   ├── theme/                  # Material 3 theming
 │   ├── utils/                  # UI utilities
 │   └── viewmodels/             # State management
@@ -186,8 +199,8 @@ app/src/main/java/dev/bilalahmad/massping/
 - **Compile SDK:** 36
 - **Min SDK:** 29 (Android 10)
 - **Target SDK:** 36
-- **Version Code:** 1
-- **Version Name:** "1.0"
+- **Version Code:** 3  
+- **Version Name:** "1.0.2"
 
 ### ProGuard
 The app includes ProGuard configuration for release builds to optimize and obfuscate code.

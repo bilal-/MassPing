@@ -221,7 +221,7 @@ private fun MessageItem(
                     }
 
                     LinearProgressIndicator(
-                        progress = sentCount.toFloat() / individualMessages.size,
+                        progress = { sentCount.toFloat() / individualMessages.size },
                         modifier = Modifier.fillMaxWidth()
                     )
 

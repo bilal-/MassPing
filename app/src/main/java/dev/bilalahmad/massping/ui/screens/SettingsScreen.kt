@@ -23,6 +23,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -39,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import dev.bilalahmad.massping.ui.components.AccountSelectionDialog
 import dev.bilalahmad.massping.ui.viewmodels.MainViewModel
 
@@ -275,6 +277,11 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // SMS Settings Section
+            SmsSettingsSection(viewModel = viewModel)
         }
 
         // Account Selection Dialog
@@ -316,5 +323,138 @@ private fun StatisticItem(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
+    }
+}
+
+@Composable
+private fun SmsSettingsSection(viewModel: MainViewModel) {
+    var smsDelay by remember { mutableStateOf(viewModel.getSmsDelay().toFloat()) }
+    var smsTimeout by remember { mutableStateOf(viewModel.getSmsTimeout().toFloat()) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "📱",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    "SMS Settings",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // SMS Delay Setting
+            Text(
+                "Message Delay: ${smsDelay.roundToInt()} seconds",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                "Time to wait between sending each SMS message. Higher values prevent carrier blocking and avoid Android's bulk SMS warnings.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontStyle = FontStyle.Italic
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Slider(
+                value = smsDelay,
+                onValueChange = { newValue ->
+                    smsDelay = newValue
+                    viewModel.setSmsDelay(newValue.roundToInt().toLong())
+                },
+                valueRange = 1f..30f,
+                steps = 28, // 29 discrete values (1-30)
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "1s (Fast)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "30s (Safe)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // SMS Timeout Setting
+            Text(
+                "Timeout: ${smsTimeout.roundToInt()} seconds",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                "How long to wait for SMS delivery confirmation before marking as sent. Useful for emulators or devices with limited SMS feedback.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontStyle = FontStyle.Italic
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Slider(
+                value = smsTimeout,
+                onValueChange = { newValue ->
+                    smsTimeout = newValue
+                    viewModel.setSmsTimeout(newValue.roundToInt().toLong())
+                },
+                valueRange = 5f..60f,
+                steps = 54, // 55 discrete values (5-60)
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    "5s (Quick)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    "60s (Patient)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Helpful info
+            Text(
+                "💡 Tip: Use higher delays on slower networks or strict carriers. Emulators work best with 10+ second timeouts.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                fontStyle = FontStyle.Italic
+            )
+        }
     }
 }

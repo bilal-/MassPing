@@ -1,9 +1,16 @@
 package dev.bilalahmad.massping.data.repository
 
+import android.Manifest
 import android.accounts.Account
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
+import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import dev.bilalahmad.massping.data.database.MassPingDatabase
@@ -14,6 +21,7 @@ import dev.bilalahmad.massping.data.models.ContactGroup
 import dev.bilalahmad.massping.data.models.IndividualMessage
 import dev.bilalahmad.massping.data.models.IndividualMessageStatus
 import dev.bilalahmad.massping.data.models.Message
+import dev.bilalahmad.massping.data.services.BackgroundSmsService
 import dev.bilalahmad.massping.data.services.NativeContactsService
 import dev.bilalahmad.massping.data.services.MessagePersonalizationService
 import dev.bilalahmad.massping.data.services.SmsService
@@ -29,6 +37,19 @@ class MassPingRepository(private val context: Context) {
         private const val TAG = "MassPingRepository"
         private const val PREFS_NAME = "massping_preferences"
         private const val KEY_SELECTED_ACCOUNTS = "selected_accounts"
+        private const val KEY_SMS_DELAY = "sms_delay_seconds"
+        private const val KEY_SMS_TIMEOUT = "sms_timeout_seconds"
+        private const val DEFAULT_SMS_DELAY = 5L // 5 seconds
+        private const val DEFAULT_SMS_TIMEOUT = 10L // 10 seconds
+
+        @Volatile
+        private var instance: MassPingRepository? = null
+
+        fun getInstance(context: Context): MassPingRepository {
+            return instance ?: synchronized(this) {
+                instance ?: MassPingRepository(context.applicationContext).also { instance = it }
+            }
+        }
     }
 
     private val sharedPrefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -39,6 +60,7 @@ class MassPingRepository(private val context: Context) {
     private val nativeContactsService = NativeContactsService(context)
     private val messagePersonalizationService = MessagePersonalizationService()
     private val smsService = SmsService(context)
+
 
     init {
         Log.d(TAG, "MassPingRepository created")
@@ -244,17 +266,42 @@ class MassPingRepository(private val context: Context) {
             return
         }
 
-        Log.d(TAG, "Starting to send ${individualMessages.size} messages for $messageId")
+        Log.d(TAG, "Starting to send ${individualMessages.size} messages for $messageId via background service")
 
-        // Use batch sending with delays to prevent Android's bulk SMS warning
-        smsService.sendBatchWithDelay(individualMessages, delayBetweenMessages = 5000L)
+        // Immediately update all individual messages to SENDING status for UI responsiveness
+        individualMessages.forEach { individualMessage ->
+            updateIndividualMessageStatus(individualMessage.id, IndividualMessageStatus.SENDING)
+        }
+
+        // Start background service to handle SMS sending
+        val intent = Intent(context, BackgroundSmsService::class.java).apply {
+            action = BackgroundSmsService.ACTION_START_SENDING
+            putParcelableArrayListExtra(BackgroundSmsService.EXTRA_MESSAGES, ArrayList(individualMessages))
+            putExtra(BackgroundSmsService.EXTRA_MESSAGE_ID, messageId)
+        }
+
+        try {
+            context.startForegroundService(intent)
+            Log.d(TAG, "Background SMS service started for $messageId")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start background SMS service", e)
+            // Fallback to direct sending if service fails to start
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                val delayMs = getSmsDelay() * 1000L
+                val timeoutSeconds = getSmsTimeout()
+                smsService.sendBatchWithDelay(individualMessages, delayBetweenMessages = delayMs, timeoutSeconds = timeoutSeconds)
+            }
+        }
     }
 
     fun updateIndividualMessageStatus(messageId: String, status: IndividualMessageStatus) {
         Log.d(TAG, "updateIndividualMessageStatus: $messageId -> $status")
-        _individualMessages.value = _individualMessages.value.mapValues { (key, messages) ->
+
+        val oldValue = _individualMessages.value
+        val newValue = oldValue.mapValues { (key, messages) ->
             messages.map { message ->
                 if (message.id == messageId) {
+                    Log.d(TAG, "Updating message $messageId status from ${message.status} to $status")
                     message.copy(
                         status = status,
                         sentAt = if (status == IndividualMessageStatus.SENT) System.currentTimeMillis() else message.sentAt,
@@ -266,6 +313,9 @@ class MassPingRepository(private val context: Context) {
             }
         }
 
+        _individualMessages.value = newValue
+        Log.d(TAG, "StateFlow updated for individualMessages, triggering UI update")
+
         // Update message history stats when status changes
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
             // Find which message this individual message belongs to
@@ -273,8 +323,11 @@ class MassPingRepository(private val context: Context) {
                 individualMessages.any { it.id == messageId }
             }?.key
 
+            Log.d(TAG, "Found message group ID for $messageId: $messageGroupId")
+
             if (messageGroupId != null) {
                 val individualMessages = _individualMessages.value[messageGroupId] ?: emptyList()
+                Log.d(TAG, "Found ${individualMessages.size} individual messages in group $messageGroupId")
 
                 // Create message history when we get the first SENT status (not SENDING)
                 if (status == IndividualMessageStatus.SENT) {
@@ -388,6 +441,46 @@ class MassPingRepository(private val context: Context) {
         _individualMessages.value = individualMessagesToKeep
 
         Log.d(TAG, "Cleared completed messages, kept ${messagesToKeep.size} active messages")
+    }
+
+    // SMS Settings
+    fun getSmsDelay(): Long {
+        return sharedPrefs.getLong(KEY_SMS_DELAY, DEFAULT_SMS_DELAY)
+    }
+
+    fun setSmsDelay(delaySeconds: Long) {
+        sharedPrefs.edit()
+            .putLong(KEY_SMS_DELAY, delaySeconds)
+            .apply()
+        Log.d(TAG, "SMS delay updated to ${delaySeconds}s")
+    }
+
+    fun getSmsTimeout(): Long {
+        return sharedPrefs.getLong(KEY_SMS_TIMEOUT, DEFAULT_SMS_TIMEOUT)
+    }
+
+    fun setSmsTimeout(timeoutSeconds: Long) {
+        sharedPrefs.edit()
+            .putLong(KEY_SMS_TIMEOUT, timeoutSeconds)
+            .apply()
+        Log.d(TAG, "SMS timeout updated to ${timeoutSeconds}s")
+    }
+
+    // Check if notification permissions are granted (Android 13+)
+    fun hasNotificationPermission(): Boolean {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true // Pre-Android 13 doesn't need explicit notification permission
+        }
+    }
+
+    // Method for background service to send individual SMS
+    fun sendIndividualSms(message: IndividualMessage, timeoutSeconds: Long = getSmsTimeout()) {
+        smsService.sendSms(message, timeoutSeconds)
     }
 
     fun cleanup() {

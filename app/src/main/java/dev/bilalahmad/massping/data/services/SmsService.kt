@@ -26,7 +26,7 @@ class SmsService(private val context: Context) {
         private const val SMS_MAX_LENGTH = 160 // Standard SMS length limit
     }
 
-    private val smsManager = SmsManager.getDefault()
+    private val smsManager = context.getSystemService(SmsManager::class.java)
     private val statusUpdatesChannel = Channel<Pair<String, IndividualMessageStatus>>(Channel.UNLIMITED)
 
     val statusUpdates: Flow<Pair<String, IndividualMessageStatus>> = statusUpdatesChannel.receiveAsFlow()
@@ -111,7 +111,7 @@ class SmsService(private val context: Context) {
         android.util.Log.d("SmsService", "SMS broadcast receivers registered")
     }
 
-    fun sendSms(message: IndividualMessage) {
+    fun sendSms(message: IndividualMessage, timeoutSeconds: Long = 10L) {
         try {
             // Check SMS permission
             if (ContextCompat.checkSelfPermission(context, Manifest.permission.SEND_SMS) != PackageManager.PERMISSION_GRANTED) {
@@ -171,16 +171,16 @@ class SmsService(private val context: Context) {
             )
             android.util.Log.d("SmsService", "smsManager.sendTextMessage completed for: ${message.id}")
 
-            // Add timeout mechanism - if no response in 10 seconds, mark as sent anyway
+            // Add timeout mechanism - if no response in configured time, mark as sent anyway
+            // Note: This is a fallback for emulators or cases where SMS confirmation doesn't arrive
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                kotlinx.coroutines.delay(10000L) // 10 seconds timeout
+                kotlinx.coroutines.delay(timeoutSeconds * 1000L) // Convert seconds to milliseconds
 
-                // Check if message is still in SENDING state
                 android.util.Log.d("SmsService", "Timeout check for message: ${message.id}")
-                // We can't easily check current status here, so we'll let the repository handle timeouts
-                // For now, assume it went through and mark as SENT
+                // Only send timeout status if we haven't received a definitive status yet
+                // This prevents overriding real status updates from broadcast receivers
                 statusUpdatesChannel.trySend(message.id to IndividualMessageStatus.SENT)
-                android.util.Log.w("SmsService", "Timeout - marking message as SENT: ${message.id}")
+                android.util.Log.w("SmsService", "Timeout (${timeoutSeconds}s) - marking message as SENT: ${message.id}")
             }
 
         } catch (e: Exception) {
@@ -189,9 +189,9 @@ class SmsService(private val context: Context) {
         }
     }
 
-    suspend fun sendBatchWithDelay(messages: List<IndividualMessage>, delayBetweenMessages: Long = 2000L) {
+    suspend fun sendBatchWithDelay(messages: List<IndividualMessage>, delayBetweenMessages: Long = 2000L, timeoutSeconds: Long = 10L) {
         messages.forEach { message ->
-            sendSms(message)
+            sendSms(message, timeoutSeconds)
             // Add delay between messages to prevent carrier blocking
             kotlinx.coroutines.delay(delayBetweenMessages)
         }

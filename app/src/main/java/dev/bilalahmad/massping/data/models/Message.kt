@@ -8,6 +8,7 @@ data class Message(
     val id: String,
     val template: String,
     val recipientGroups: List<String>,
+    val individualContacts: List<String> = emptyList(), // Individual contact IDs when not using groups
     val recipientGroupNames: List<String> = emptyList(),
     val totalRecipients: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),

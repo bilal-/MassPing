@@ -34,6 +34,7 @@ class SmsService(private val context: Context) {
     private val sentReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
             android.util.Log.d("SmsService", "sentReceiver onReceive called with resultCode: $resultCode")
+            android.util.Log.d("SmsService", "Device: ${android.os.Build.MODEL}, Carrier: ${(context?.getSystemService(Context.TELEPHONY_SERVICE) as? android.telephony.TelephonyManager)?.networkOperatorName}")
             val messageId = intent?.getStringExtra("messageId") ?: run {
                 android.util.Log.e("SmsService", "sentReceiver: no messageId in intent")
                 return
@@ -162,6 +163,9 @@ class SmsService(private val context: Context) {
 
             // Send SMS with delivery receipt
             android.util.Log.d("SmsService", "Calling smsManager.sendTextMessage for: ${message.id}")
+            android.util.Log.d("SmsService", "SMS Details - To: ${message.phoneNumber}, Length: ${message.personalizedContent.length} chars")
+            android.util.Log.d("SmsService", "SMS Content Preview: ${message.personalizedContent.take(50)}...")
+            
             smsManager.sendTextMessage(
                 message.phoneNumber,
                 null,

@@ -52,8 +52,10 @@ fun NewMessageScreen(
 
     var messageTemplate by remember { mutableStateOf("") }
     var selectedGroupIds by remember { mutableStateOf(setOf<String>()) }
+    var selectedContactIds by remember { mutableStateOf(setOf<String>()) }
     var showPreview by remember { mutableStateOf(false) }
     var previewMessages by remember { mutableStateOf(emptyList<Pair<Contact, String>>()) }
+    var recipientSelectionMode by remember { mutableStateOf("groups") } // "groups" or "contacts"
 
     val placeholders = remember { viewModel.getAvailablePlaceholders() }
     val listState = rememberLazyListState()
@@ -161,7 +163,7 @@ fun NewMessageScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // Contact Groups Section
+                // Recipients Selection Section
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth()
@@ -170,48 +172,142 @@ fun NewMessageScreen(
                             modifier = Modifier.padding(16.dp)
                         ) {
                             Text(
-                                "Select Contact Groups",
+                                "Select Recipients",
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
 
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                            if (contactGroups.isEmpty()) {
-                                Text(
-                                    "No contact groups available. All contacts will be included.",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            } else {
-                                contactGroups.forEach { group ->
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Checkbox(
-                                            checked = group.id in selectedGroupIds,
-                                            onCheckedChange = { isChecked ->
-                                                selectedGroupIds = if (isChecked) {
-                                                    selectedGroupIds + group.id
-                                                } else {
-                                                    selectedGroupIds - group.id
+                            // Mode selection buttons
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Button(
+                                    onClick = { recipientSelectionMode = "groups" },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(if (recipientSelectionMode == "groups") "✓ Groups" else "Groups")
+                                }
+                                Button(
+                                    onClick = { recipientSelectionMode = "contacts" },
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text(if (recipientSelectionMode == "contacts") "✓ Contacts" else "Contacts")
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            when (recipientSelectionMode) {
+                                "groups" -> {
+                                    if (contactGroups.isEmpty()) {
+                                        Text(
+                                            "No contact groups available. All contacts will be included.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    } else {
+                                        contactGroups.forEach { group ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Checkbox(
+                                                    checked = group.id in selectedGroupIds,
+                                                    onCheckedChange = { isChecked ->
+                                                        selectedGroupIds = if (isChecked) {
+                                                            selectedGroupIds + group.id
+                                                        } else {
+                                                            selectedGroupIds - group.id
+                                                        }
+                                                    }
+                                                )
+
+                                                Spacer(modifier = Modifier.width(8.dp))
+
+                                                Column {
+                                                    Text(
+                                                        group.name,
+                                                        style = MaterialTheme.typography.bodyMedium
+                                                    )
+                                                    Text(
+                                                        "${group.contactCount} contacts",
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
                                                 }
                                             }
+                                        }
+                                    }
+                                }
+                                "contacts" -> {
+                                    if (contacts.isEmpty()) {
+                                        Text(
+                                            "No contacts available. Please sync your contacts first.",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
-
-                                        Spacer(modifier = Modifier.width(8.dp))
-
-                                        Column {
-                                            Text(
-                                                group.name,
-                                                style = MaterialTheme.typography.bodyMedium
-                                            )
-                                            Text(
-                                                "${group.contactCount} contacts",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                    } else {
+                                        Text(
+                                            "Select individual contacts (${selectedContactIds.size} selected):",
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        
+                                        // Add select all / deselect all buttons
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Button(
+                                                onClick = { selectedContactIds = contacts.map { it.id }.toSet() },
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text("Select All")
+                                            }
+                                            Button(
+                                                onClick = { selectedContactIds = emptySet() },
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text("Clear All")
+                                            }
+                                        }
+                                        
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        
+                                        contacts.sortedBy { it.name }.forEach { contact ->
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Checkbox(
+                                                    checked = contact.id in selectedContactIds,
+                                                    onCheckedChange = { isChecked ->
+                                                        selectedContactIds = if (isChecked) {
+                                                            selectedContactIds + contact.id
+                                                        } else {
+                                                            selectedContactIds - contact.id
+                                                        }
+                                                    }
+                                                )
+                                                Spacer(modifier = Modifier.width(8.dp))
+                                                Column {
+                                                    Text(
+                                                        contact.name,
+                                                        style = MaterialTheme.typography.bodyMedium
+                                                    )
+                                                    contact.primaryPhone?.let { phone ->
+                                                        Text(
+                                                            phone,
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -230,20 +326,35 @@ fun NewMessageScreen(
                     ) {
                         Button(
                             onClick = {
-                                val groupsToUse = if (selectedGroupIds.isEmpty()) {
-                                    // If no groups selected, use all contacts
-                                    emptyList()
-                                } else {
-                                    selectedGroupIds.toList()
+                                when (recipientSelectionMode) {
+                                    "groups" -> {
+                                        val groupsToUse = if (selectedGroupIds.isEmpty()) {
+                                            emptyList()
+                                        } else {
+                                            selectedGroupIds.toList()
+                                        }
+                                        previewMessages = viewModel.previewPersonalizedMessages(
+                                            messageTemplate,
+                                            groupsToUse
+                                        )
+                                    }
+                                    "contacts" -> {
+                                        val contactsToUse = if (selectedContactIds.isEmpty()) {
+                                            emptyList()
+                                        } else {
+                                            selectedContactIds.toList()
+                                        }
+                                        previewMessages = viewModel.previewPersonalizedMessagesForContacts(
+                                            messageTemplate,
+                                            contactsToUse
+                                        )
+                                    }
                                 }
-
-                                previewMessages = viewModel.previewPersonalizedMessages(
-                                    messageTemplate,
-                                    groupsToUse
-                                )
                                 showPreview = true
                             },
-                            enabled = messageTemplate.isNotBlank(),
+                            enabled = messageTemplate.isNotBlank() && 
+                                    ((recipientSelectionMode == "groups" && selectedGroupIds.isNotEmpty()) ||
+                                     (recipientSelectionMode == "contacts" && selectedContactIds.isNotEmpty())),
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Preview Messages")
@@ -251,24 +362,39 @@ fun NewMessageScreen(
 
                         Button(
                             onClick = {
-                                val groupsToUse = if (selectedGroupIds.isEmpty()) {
-                                    emptyList()
-                                } else {
-                                    selectedGroupIds.toList()
+                                when (recipientSelectionMode) {
+                                    "groups" -> {
+                                        val groupsToUse = if (selectedGroupIds.isEmpty()) {
+                                            emptyList()
+                                        } else {
+                                            selectedGroupIds.toList()
+                                        }
+                                        val message = viewModel.createMessage(messageTemplate, groupsToUse)
+                                        viewModel.generatePersonalizedMessages(message.id)
+                                    }
+                                    "contacts" -> {
+                                        val contactsToUse = if (selectedContactIds.isEmpty()) {
+                                            emptyList()
+                                        } else {
+                                            selectedContactIds.toList()
+                                        }
+                                        val message = viewModel.createMessageForContacts(messageTemplate, contactsToUse)
+                                        viewModel.generatePersonalizedMessages(message.id)
+                                    }
                                 }
-
-                                val message = viewModel.createMessage(messageTemplate, groupsToUse)
-                                viewModel.generatePersonalizedMessages(message.id)
 
                                 // Reset form
                                 messageTemplate = ""
                                 selectedGroupIds = emptySet()
+                                selectedContactIds = emptySet()
                                 showPreview = false
 
                                 // Navigate to Messages tab
                                 onMessageCreated()
                             },
-                            enabled = messageTemplate.isNotBlank(),
+                            enabled = messageTemplate.isNotBlank() && 
+                                    ((recipientSelectionMode == "groups" && selectedGroupIds.isNotEmpty()) ||
+                                     (recipientSelectionMode == "contacts" && selectedContactIds.isNotEmpty())),
                             modifier = Modifier.weight(1f)
                         ) {
                             Text("Create Message")

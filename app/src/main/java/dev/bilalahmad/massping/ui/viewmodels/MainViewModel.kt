@@ -107,6 +107,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return repository.previewPersonalizedMessages(template, selectedGroupIds)
     }
 
+    fun previewPersonalizedMessagesForContacts(template: String, selectedContactIds: List<String>): List<Pair<Contact, String>> {
+        return repository.previewPersonalizedMessagesForContacts(template, selectedContactIds)
+    }
+
+    fun createMessageForContacts(template: String, selectedContactIds: List<String>): Message {
+        return repository.createMessageForContacts(template, selectedContactIds)
+    }
+
     fun sendMessage(messageId: String) {
         viewModelScope.launch {
             repository.sendMessage(messageId)

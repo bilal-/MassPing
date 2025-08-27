@@ -237,7 +237,15 @@ class MassPingRepository(private val context: Context) {
 
     fun generatePersonalizedMessages(messageId: String): List<IndividualMessage> {
         val message = _messages.value.find { it.id == messageId } ?: return emptyList()
-        val contacts = getContactsByGroupIds(message.recipientGroups)
+        
+        // Handle both group selection and individual contact selection
+        val contacts = if (message.individualContacts.isNotEmpty()) {
+            // Individual contact selection mode
+            _contacts.value.filter { it.id in message.individualContacts }
+        } else {
+            // Group selection mode
+            getContactsByGroupIds(message.recipientGroups)
+        }
 
         val personalizedMessages = messagePersonalizationService.personalizeMessage(message, contacts)
 
@@ -249,6 +257,24 @@ class MassPingRepository(private val context: Context) {
     fun previewPersonalizedMessages(template: String, selectedGroupIds: List<String>): List<Pair<Contact, String>> {
         val contacts = getContactsByGroupIds(selectedGroupIds)
         return messagePersonalizationService.previewPersonalization(template, contacts)
+    }
+
+    fun previewPersonalizedMessagesForContacts(template: String, selectedContactIds: List<String>): List<Pair<Contact, String>> {
+        val contacts = _contacts.value.filter { it.id in selectedContactIds }
+        return messagePersonalizationService.previewPersonalization(template, contacts)
+    }
+
+    fun createMessageForContacts(template: String, selectedContactIds: List<String>): Message {
+        val message = Message(
+            id = java.util.UUID.randomUUID().toString(),
+            template = template,
+            recipientGroups = emptyList(), // No groups for individual contact selection
+            individualContacts = selectedContactIds, // Store individual contact IDs
+            createdAt = System.currentTimeMillis()
+        )
+        _messages.value = _messages.value + message
+        Log.d(TAG, "Created message for ${selectedContactIds.size} individual contacts: ${message.id}")
+        return message
     }
 
     suspend fun sendMessage(messageId: String) {
@@ -273,24 +299,10 @@ class MassPingRepository(private val context: Context) {
             updateIndividualMessageStatus(individualMessage.id, IndividualMessageStatus.SENDING)
         }
 
-        // Start background service to handle SMS sending
-        val intent = Intent(context, BackgroundSmsService::class.java).apply {
-            action = BackgroundSmsService.ACTION_START_SENDING
-            putParcelableArrayListExtra(BackgroundSmsService.EXTRA_MESSAGES, ArrayList(individualMessages))
-            putExtra(BackgroundSmsService.EXTRA_MESSAGE_ID, messageId)
-        }
-
-        try {
-            context.startForegroundService(intent)
-            Log.d(TAG, "Background SMS service started for $messageId")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to start background SMS service", e)
-            // Fallback to direct sending if service fails to start
-            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
-                val delayMs = getSmsDelay() * 1000L
-                val timeoutSeconds = getSmsTimeout()
-                smsService.sendBatchWithDelay(individualMessages, delayBetweenMessages = delayMs, timeoutSeconds = timeoutSeconds)
-            }
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            val delayMs = getSmsDelay() * 1000L
+            val timeoutSeconds = getSmsTimeout()
+            smsService.sendBatchWithDelay(individualMessages, delayBetweenMessages = delayMs, timeoutSeconds = timeoutSeconds)
         }
     }
 

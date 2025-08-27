@@ -83,6 +83,8 @@ fun ContactDetailsDialog(
                         IconButton(
                             onClick = {
                                 fun editContact() {
+                                    android.util.Log.d("ContactDetailsDialog", "Attempting to edit contact: ${contact.name} (ID: ${contact.id})")
+                                    
                                     // Try multiple approaches to find and edit the specific contact
                                     val editStrategies = listOf(
                                         // Strategy 1: Modern ContactsContract URI with lookup key
@@ -111,15 +113,20 @@ fun ContactDetailsDialog(
                                     )
 
                                     // Try each strategy
-                                    for (strategy in editStrategies) {
+                                    for ((index, strategy) in editStrategies.withIndex()) {
                                         try {
                                             val intent = strategy()
+                                            android.util.Log.d("ContactDetailsDialog", "Trying strategy ${index + 1}: ${intent.data}")
                                             // Check if there's an app that can handle this intent
                                             if (intent.resolveActivity(context.packageManager) != null) {
+                                                android.util.Log.d("ContactDetailsDialog", "Strategy ${index + 1} succeeded, launching intent")
                                                 context.startActivity(intent)
                                                 return
+                                            } else {
+                                                android.util.Log.d("ContactDetailsDialog", "Strategy ${index + 1} failed - no app can handle this intent")
                                             }
                                         } catch (e: Exception) {
+                                            android.util.Log.e("ContactDetailsDialog", "Strategy ${index + 1} threw exception: ${e.message}")
                                             // Continue to next strategy
                                         }
                                     }
@@ -136,18 +143,32 @@ fun ContactDetailsDialog(
                                         // Continue to next fallback
                                     }
 
-                                    // Fallback 2: Try any contacts app
+                                    // Fallback 2: Try universal contacts picker
+                                    try {
+                                        val contactsIntent = Intent(Intent.ACTION_PICK).apply {
+                                            data = ContactsContract.Contacts.CONTENT_URI
+                                        }
+                                        if (contactsIntent.resolveActivity(context.packageManager) != null) {
+                                            context.startActivity(contactsIntent)
+                                            Toast.makeText(context, "Opening contacts picker - please find ${contact.name}", Toast.LENGTH_LONG).show()
+                                            return
+                                        }
+                                    } catch (e: Exception) {
+                                        android.util.Log.e("ContactDetailsDialog", "Universal contacts picker failed: ${e.message}")
+                                    }
+
+                                    // Fallback 3: Try any default contacts app
                                     try {
                                         val contactsIntent = Intent(Intent.ACTION_VIEW).apply {
                                             data = ContactsContract.Contacts.CONTENT_URI
                                         }
                                         if (contactsIntent.resolveActivity(context.packageManager) != null) {
                                             context.startActivity(contactsIntent)
-                                            Toast.makeText(context, "Opened Contacts app - please search for ${contact.name}", Toast.LENGTH_LONG).show()
+                                            Toast.makeText(context, "Opened default contacts app - please search for ${contact.name}", Toast.LENGTH_LONG).show()
                                             return
                                         }
                                     } catch (e: Exception) {
-                                        // Continue to final fallback
+                                        android.util.Log.e("ContactDetailsDialog", "Generic contacts view failed: ${e.message}")
                                     }
 
                                     // Final fallback: Show error message

@@ -267,23 +267,23 @@ manage_release_branch() {
         local existing_branch="release/v${base_version}.0"
 
         if git show-ref --verify --quiet "refs/heads/$existing_branch"; then
-            log_info "Checking out existing release branch: $existing_branch"
-            git checkout "$existing_branch"
+            log_info "Checking out existing release branch: $existing_branch" >&2
+            git checkout "$existing_branch" >&2
 
             # Create hotfix branch from release branch
             branch_name="release/v$version"
-            log_info "Creating hotfix branch: $branch_name"
-            git checkout -b "$branch_name"
+            log_info "Creating hotfix branch: $branch_name" >&2
+            git checkout -b "$branch_name" >&2
         else
-            log_warning "No existing release branch found for hotfix. Creating new release branch."
-            git checkout -b "$branch_name" "$MAIN_BRANCH"
+            log_warning "No existing release branch found for hotfix. Creating new release branch." >&2
+            git checkout -b "$branch_name" "$MAIN_BRANCH" >&2
         fi
     else
         # Normal release: create new branch from main
-        log_info "Creating release branch: $branch_name"
-        git checkout "$MAIN_BRANCH"
-        git pull origin "$MAIN_BRANCH"
-        git checkout -b "$branch_name"
+        log_info "Creating release branch: $branch_name" >&2
+        git checkout "$MAIN_BRANCH" >&2
+        git pull origin "$MAIN_BRANCH" >&2
+        git checkout -b "$branch_name" >&2
     fi
 
     echo "$branch_name"

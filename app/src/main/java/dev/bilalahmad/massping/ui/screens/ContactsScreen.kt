@@ -60,12 +60,12 @@ fun ContactsScreen(viewModel: MainViewModel) {
     val contactGroups by viewModel.contactGroups.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     // Filter states
     var selectedGroupId by remember { mutableStateOf<String?>(null) }
     var showGroupDropdown by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    
+
     // Filter contacts by selected group and search query
     val filteredContacts = remember(contacts, selectedGroupId, searchQuery) {
         var filtered = if (selectedGroupId == null) {
@@ -75,7 +75,7 @@ fun ContactsScreen(viewModel: MainViewModel) {
                 contact.groups.contains(selectedGroupId)
             }
         }
-        
+
         // Apply search filter
         if (searchQuery.isNotBlank()) {
             val query = searchQuery.lowercase().trim()
@@ -87,17 +87,17 @@ fun ContactsScreen(viewModel: MainViewModel) {
                 contact.department?.lowercase()?.contains(query) == true
             }
         }
-        
+
         filtered
     }
-    
+
     val selectedGroupName = remember(contactGroups, selectedGroupId) {
-        if (selectedGroupId == null) "All Contacts" 
+        if (selectedGroupId == null) "All Contacts"
         else contactGroups.find { it.id == selectedGroupId }?.name ?: "Unknown Group"
     }
-    
+
     var hasPermissions by remember { mutableStateOf(false) }
-    
+
     val permissionHandler = rememberPermissionHandler(
         onPermissionsGranted = {
             hasPermissions = true
@@ -107,7 +107,7 @@ fun ContactsScreen(viewModel: MainViewModel) {
             hasPermissions = false
         }
     )
-    
+
     // Check initial permission state
     LaunchedEffect(Unit) {
         hasPermissions = permissionHandler.hasAllPermissions()
@@ -115,8 +115,8 @@ fun ContactsScreen(viewModel: MainViewModel) {
             viewModel.loadAvailableAccounts()
         }
     }
-    
-    
+
+
     // Check if we need to show permission screen
     if (!hasPermissions) {
         val missingPermissions = permissionHandler.getMissingPermissions()
@@ -129,18 +129,18 @@ fun ContactsScreen(viewModel: MainViewModel) {
         )
         return
     }
-    
+
     LaunchedEffect(uiState.error) {
         uiState.error?.let { error ->
             snackbarHostState.showSnackbar(error)
             viewModel.clearError()
         }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Column {
                         Text(
                             "Contacts (${filteredContacts.size})",
@@ -212,18 +212,18 @@ fun ContactsScreen(viewModel: MainViewModel) {
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 4.dp)
                         .height(48.dp),
-                    placeholder = { 
+                    placeholder = {
                         Text(
                             "Search contacts, jobs, companies...",
                             style = MaterialTheme.typography.bodySmall
-                        ) 
+                        )
                     },
-                    leadingIcon = { 
+                    leadingIcon = {
                         Icon(
-                            Icons.Default.Search, 
+                            Icons.Default.Search,
                             contentDescription = "Search",
                             modifier = Modifier.size(18.dp)
-                        ) 
+                        )
                     },
                     trailingIcon = {
                         if (searchQuery.isNotBlank()) {
@@ -232,7 +232,7 @@ fun ContactsScreen(viewModel: MainViewModel) {
                                 modifier = Modifier.size(36.dp)
                             ) {
                                 Icon(
-                                    Icons.Default.Clear, 
+                                    Icons.Default.Clear,
                                     contentDescription = "Clear search",
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -243,7 +243,7 @@ fun ContactsScreen(viewModel: MainViewModel) {
                     shape = RoundedCornerShape(8.dp),
                     textStyle = MaterialTheme.typography.bodySmall
                 )
-                
+
                 // Group filter dropdown
                 if (contactGroups.isNotEmpty()) {
                     Card(
@@ -275,13 +275,13 @@ fun ContactsScreen(viewModel: MainViewModel) {
                                     )
                                 }
                             }
-                            
+
                             DropdownMenu(
                                 expanded = showGroupDropdown,
                                 onDismissRequest = { showGroupDropdown = false }
                             ) {
                                 DropdownMenuItem(
-                                    text = { 
+                                    text = {
                                         Text("All Contacts (${contacts.size})")
                                     },
                                     onClick = {
@@ -289,10 +289,10 @@ fun ContactsScreen(viewModel: MainViewModel) {
                                         showGroupDropdown = false
                                     }
                                 )
-                                
+
                                 contactGroups.forEach { group ->
                                     DropdownMenuItem(
-                                        text = { 
+                                        text = {
                                             Text("${group.name} (${group.contactIds.size})")
                                         },
                                         onClick = {
@@ -305,7 +305,7 @@ fun ContactsScreen(viewModel: MainViewModel) {
                         }
                     }
                 }
-                
+
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -334,7 +334,7 @@ fun ContactsScreen(viewModel: MainViewModel) {
                         }
                     }
                 }
-                
+
                 // Contacts list
                 items(filteredContacts) { contact ->
                     ContactItem(
@@ -352,7 +352,7 @@ private fun ContactItem(
     contact: Contact
 ) {
     var showDetailsDialog by remember { mutableStateOf(false) }
-    
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -374,7 +374,7 @@ private fun ContactItem(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     // Show mobile number first (SMS priority)
                     contact.mobilePhone?.let { mobile ->
                         Row(
@@ -393,7 +393,7 @@ private fun ContactItem(
                             )
                         }
                     }
-                    
+
                     // Show other phone numbers if no mobile or additional numbers
                     if (contact.mobilePhone == null) {
                         contact.primaryPhone?.let { phone ->
@@ -413,7 +413,7 @@ private fun ContactItem(
                             }
                         }
                     }
-                    
+
                     // Show count of additional numbers if any
                     if (contact.phoneNumbers.size > 1) {
                         Text(
@@ -422,11 +422,11 @@ private fun ContactItem(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    
+
                     // Show professional info if available
                     if (contact.jobTitle?.isNotBlank() == true || contact.department?.isNotBlank() == true || contact.company?.isNotBlank() == true) {
                         Spacer(modifier = Modifier.height(3.dp))
-                        
+
                         // Job title and department
                         if (contact.jobTitle?.isNotBlank() == true) {
                             Row(
@@ -467,7 +467,7 @@ private fun ContactItem(
                                 )
                             }
                         }
-                        
+
                         // Company name if different from job title line
                         if (contact.company?.isNotBlank() == true && contact.jobTitle?.isBlank() != false) {
                             Row(
@@ -487,7 +487,7 @@ private fun ContactItem(
                         }
                     }
                 }
-                
+
                 // Info button to show detailed view
                 IconButton(
                     onClick = { showDetailsDialog = true }
@@ -499,9 +499,9 @@ private fun ContactItem(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(4.dp))
-            
+
             // Show nickname if available (read-only)
             if (contact.nickname?.isNotBlank() == true) {
                 Row(
@@ -521,7 +521,7 @@ private fun ContactItem(
                 }
             }
         }
-        
+
         // Contact Details Dialog
         if (showDetailsDialog) {
             ContactDetailsDialog(

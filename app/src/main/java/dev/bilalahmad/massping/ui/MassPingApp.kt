@@ -31,13 +31,13 @@ private const val TAG = "MassPingApp"
 fun MassPingApp(viewModel: MainViewModel) {
     Log.d(TAG, "MassPingApp composing")
     val navController = rememberNavController()
-    
+
     Scaffold(
             bottomBar = {
                 NavigationBar {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
                     val currentDestination = navBackStackEntry?.destination
-                    
+
                     NavigationBarItem(
                         icon = { Icon(painterResource(R.drawable.ic_contacts), contentDescription = "Contacts") },
                         label = { Text("Contacts") },
@@ -52,7 +52,7 @@ fun MassPingApp(viewModel: MainViewModel) {
                             }
                         }
                     )
-                    
+
                     NavigationBarItem(
                         icon = { Icon(painterResource(R.drawable.ic_messages), contentDescription = "Messages") },
                         label = { Text("Messages") },
@@ -67,7 +67,7 @@ fun MassPingApp(viewModel: MainViewModel) {
                             }
                         }
                     )
-                    
+
                     NavigationBarItem(
                         icon = { Icon(painterResource(R.drawable.ic_new_message), contentDescription = "New Message") },
                         label = { Text("New Message") },
@@ -82,7 +82,7 @@ fun MassPingApp(viewModel: MainViewModel) {
                             }
                         }
                     )
-                    
+
                     NavigationBarItem(
                         icon = { Icon(painterResource(R.drawable.ic_settings), contentDescription = "Settings") },
                         label = { Text("Settings") },

@@ -16,21 +16,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-    
+
     companion object {
         private const val TAG = "MainViewModel"
     }
-    
+
     init {
         Log.d(TAG, "MainViewModel created")
     }
-    
+
     private val repository = MassPingRepository(application)
-    
+
     // UI State
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
-    
+
     // Data from repository
     val contacts = repository.contacts
     val contactGroups = repository.contactGroups
@@ -40,7 +40,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selectedAccounts = repository.selectedAccounts
     init {
         Log.d(TAG, "MainViewModel init block executing")
-        
+
         // Listen for SMS status updates
         viewModelScope.launch {
             repository.smsStatusUpdates.collect { (messageId, status) ->
@@ -48,12 +48,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
     }
-    
+
     fun loadAvailableAccounts() {
         Log.d(TAG, "loadAvailableAccounts() called")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
-            
+
             repository.loadAvailableAccounts()
                 .onSuccess {
                     Log.d(TAG, "Accounts loaded successfully")
@@ -68,18 +68,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
     }
-    
+
     fun updateSelectedAccounts(accounts: List<ContactAccount>) {
         repository.updateSelectedAccounts(accounts)
         syncContacts()
     }
-    
+
     fun syncContacts() {
         Log.d(TAG, "syncContacts() called")
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null)
             Log.d(TAG, "Starting contacts sync...")
-            
+
             repository.syncContacts()
                 .onSuccess {
                     Log.d(TAG, "Contacts sync successful")
@@ -94,38 +94,38 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 }
         }
     }
-    
+
     fun updateContactNickname(contactId: String, nickname: String) {
         repository.updateContactNickname(contactId, nickname)
     }
-    
-    
+
+
     fun createMessage(template: String, selectedGroupIds: List<String>): Message {
         return repository.createMessage(template, selectedGroupIds)
     }
-    
+
     fun generatePersonalizedMessages(messageId: String): List<IndividualMessage> {
         return repository.generatePersonalizedMessages(messageId)
     }
-    
+
     fun previewPersonalizedMessages(template: String, selectedGroupIds: List<String>): List<Pair<Contact, String>> {
         return repository.previewPersonalizedMessages(template, selectedGroupIds)
     }
-    
+
     fun sendMessage(messageId: String) {
         viewModelScope.launch {
             repository.sendMessage(messageId)
         }
     }
-    
+
     fun getAvailablePlaceholders(): List<String> {
         return repository.getAvailablePlaceholders()
     }
-    
+
     fun clearError() {
         _uiState.value = _uiState.value.copy(error = null)
     }
-    
+
     override fun onCleared() {
         super.onCleared()
         repository.cleanup()

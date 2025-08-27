@@ -4,20 +4,20 @@
 
     <!-- Permissions for contacts access -->
     <uses-permission android:name="android.permission.READ_CONTACTS" />
-    
+
     <!-- Permissions for SMS -->
     <uses-permission android:name="android.permission.SEND_SMS" />
-    
+
     <!-- Permission for checking SMS delivery -->
     <uses-permission android:name="android.permission.READ_PHONE_STATE" />
-    
+
     <!-- Permission for foreground service -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
-    
+
     <!-- Permission for notifications -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    
+
     <!-- Feature declaration for telephony hardware -->
     <uses-feature android:name="android.hardware.telephony" android:required="false" />
 
@@ -42,7 +42,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        
+
         <!-- Foreground service for background SMS sending -->
         <service
             android:name=".data.services.BackgroundSmsService"

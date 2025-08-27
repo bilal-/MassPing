@@ -49,16 +49,16 @@ fun NewMessageScreen(
 ) {
     val contactGroups by viewModel.contactGroups.collectAsState()
     val contacts by viewModel.contacts.collectAsState()
-    
+
     var messageTemplate by remember { mutableStateOf("") }
     var selectedGroupIds by remember { mutableStateOf(setOf<String>()) }
     var showPreview by remember { mutableStateOf(false) }
     var previewMessages by remember { mutableStateOf(emptyList<Pair<Contact, String>>()) }
-    
+
     val placeholders = remember { viewModel.getAvailablePlaceholders() }
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
-    
+
     // Auto-scroll to preview section when preview is shown
     LaunchedEffect(showPreview) {
         if (showPreview && previewMessages.isNotEmpty()) {
@@ -68,11 +68,11 @@ fun NewMessageScreen(
             }
         }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         "New Message",
                         style = MaterialTheme.typography.headlineMedium,
@@ -130,9 +130,9 @@ fun NewMessageScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            
+
                             Spacer(modifier = Modifier.height(8.dp))
-                            
+
                             OutlinedTextField(
                                 value = messageTemplate,
                                 onValueChange = { messageTemplate = it },
@@ -141,15 +141,15 @@ fun NewMessageScreen(
                                 minLines = 3,
                                 placeholder = { Text("Hi {name}, how are you doing?") }
                             )
-                            
+
                             Spacer(modifier = Modifier.height(8.dp))
-                            
+
                             Text(
                                 "Available placeholders:",
                                 style = MaterialTheme.typography.bodySmall,
                                 fontWeight = FontWeight.Bold
                             )
-                            
+
                             Text(
                                 placeholders.joinToString(" • "),
                                 style = MaterialTheme.typography.bodySmall,
@@ -157,10 +157,10 @@ fun NewMessageScreen(
                             )
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                
+
                 // Contact Groups Section
                 item {
                     Card(
@@ -174,9 +174,9 @@ fun NewMessageScreen(
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.Bold
                             )
-                            
+
                             Spacer(modifier = Modifier.height(8.dp))
-                            
+
                             if (contactGroups.isEmpty()) {
                                 Text(
                                     "No contact groups available. All contacts will be included.",
@@ -199,9 +199,9 @@ fun NewMessageScreen(
                                                 }
                                             }
                                         )
-                                        
+
                                         Spacer(modifier = Modifier.width(8.dp))
-                                        
+
                                         Column {
                                             Text(
                                                 group.name,
@@ -218,10 +218,10 @@ fun NewMessageScreen(
                             }
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                
+
                 // Action Buttons
                 item {
                     Row(
@@ -236,9 +236,9 @@ fun NewMessageScreen(
                                 } else {
                                     selectedGroupIds.toList()
                                 }
-                                
+
                                 previewMessages = viewModel.previewPersonalizedMessages(
-                                    messageTemplate, 
+                                    messageTemplate,
                                     groupsToUse
                                 )
                                 showPreview = true
@@ -248,7 +248,7 @@ fun NewMessageScreen(
                         ) {
                             Text("Preview Messages")
                         }
-                        
+
                         Button(
                             onClick = {
                                 val groupsToUse = if (selectedGroupIds.isEmpty()) {
@@ -256,15 +256,15 @@ fun NewMessageScreen(
                                 } else {
                                     selectedGroupIds.toList()
                                 }
-                                
+
                                 val message = viewModel.createMessage(messageTemplate, groupsToUse)
                                 viewModel.generatePersonalizedMessages(message.id)
-                                
+
                                 // Reset form
                                 messageTemplate = ""
                                 selectedGroupIds = emptySet()
                                 showPreview = false
-                                
+
                                 // Navigate to Messages tab
                                 onMessageCreated()
                             },
@@ -274,10 +274,10 @@ fun NewMessageScreen(
                             Text("Create Message")
                         }
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
                 }
-                
+
                 // Preview Section
                 if (showPreview && previewMessages.isNotEmpty()) {
                     item {
@@ -292,14 +292,14 @@ fun NewMessageScreen(
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold
                                 )
-                                
+
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
                         }
-                        
+
                         Spacer(modifier = Modifier.height(8.dp))
                     }
-                    
+
                     items(previewMessages) { (contact, personalizedMessage) ->
                         Card(
                             modifier = Modifier
@@ -315,9 +315,9 @@ fun NewMessageScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                
+
                                 Spacer(modifier = Modifier.height(4.dp))
-                                
+
                                 SelectionContainer {
                                     Text(
                                         personalizedMessage,

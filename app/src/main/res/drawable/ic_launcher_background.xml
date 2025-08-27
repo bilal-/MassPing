@@ -5,7 +5,7 @@
     android:height="108dp"
     android:viewportWidth="150"
     android:viewportHeight="150">
-    
+
     <!-- Square background with rounded corners and gradient from SVG -->
     <path android:pathData="M0,0h150v150h-150z">
         <aapt:attr name="android:fillColor">

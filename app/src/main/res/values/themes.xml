@@ -2,12 +2,12 @@
 <resources>
 
     <style name="Theme.MassPing" parent="android:Theme.Material.Light.NoActionBar" />
-    
+
     <style name="Theme.MassPing.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@drawable/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
         <item name="windowSplashScreenAnimationDuration">1000</item>
         <item name="postSplashScreenTheme">@style/Theme.MassPing</item>
     </style>
-    
+
 </resources>

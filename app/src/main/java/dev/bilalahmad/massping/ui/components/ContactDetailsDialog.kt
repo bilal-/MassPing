@@ -43,7 +43,7 @@ fun ContactDetailsDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -69,7 +69,7 @@ fun ContactDetailsDialog(
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
-                        
+
                         contact.nickname?.let { nickname ->
                             Text(
                                 text = "\"$nickname\"",
@@ -78,7 +78,7 @@ fun ContactDetailsDialog(
                             )
                         }
                     }
-                    
+
                     Row {
                         IconButton(
                             onClick = {
@@ -109,7 +109,7 @@ fun ContactDetailsDialog(
                                             }
                                         }
                                     )
-                                    
+
                                     // Try each strategy
                                     for (strategy in editStrategies) {
                                         try {
@@ -123,7 +123,7 @@ fun ContactDetailsDialog(
                                             // Continue to next strategy
                                         }
                                     }
-                                    
+
                                     // Fallback 1: Try to open Google Contacts app specifically
                                     try {
                                         val googleContactsIntent = context.packageManager.getLaunchIntentForPackage("com.google.android.contacts")
@@ -135,7 +135,7 @@ fun ContactDetailsDialog(
                                     } catch (e: Exception) {
                                         // Continue to next fallback
                                     }
-                                    
+
                                     // Fallback 2: Try any contacts app
                                     try {
                                         val contactsIntent = Intent(Intent.ACTION_VIEW).apply {
@@ -149,15 +149,15 @@ fun ContactDetailsDialog(
                                     } catch (e: Exception) {
                                         // Continue to final fallback
                                     }
-                                    
+
                                     // Final fallback: Show error message
                                     Toast.makeText(
-                                        context, 
-                                        "No contacts app found. Please install Google Contacts or a compatible contacts app to edit contacts.", 
+                                        context,
+                                        "No contacts app found. Please install Google Contacts or a compatible contacts app to edit contacts.",
                                         Toast.LENGTH_LONG
                                     ).show()
                                 }
-                                
+
                                 editContact()
                             },
                             modifier = Modifier.size(24.dp)
@@ -168,7 +168,7 @@ fun ContactDetailsDialog(
                                 modifier = Modifier.size(20.dp)
                             )
                         }
-                        
+
                         IconButton(
                             onClick = onDismiss,
                             modifier = Modifier.size(24.dp)
@@ -181,9 +181,9 @@ fun ContactDetailsDialog(
                         }
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 LazyColumn(
                     modifier = Modifier
                         .weight(1f, fill = true)
@@ -201,7 +201,7 @@ fun ContactDetailsDialog(
                                     contact.middleName,
                                     contact.lastName
                                 ).joinToString(" ")
-                                
+
                                 if (nameParts.isNotBlank()) {
                                     ContactDetailItem(
                                         label = "Structured Name",
@@ -211,7 +211,7 @@ fun ContactDetailsDialog(
                             }
                         }
                     }
-                    
+
                     // Organization Information
                     if (contact.company != null || contact.jobTitle != null || contact.department != null) {
                         item {
@@ -225,14 +225,14 @@ fun ContactDetailsDialog(
                                         value = company
                                     )
                                 }
-                                
+
                                 contact.jobTitle?.let { jobTitle ->
                                     ContactDetailItem(
                                         label = "Job Title",
                                         value = jobTitle
                                     )
                                 }
-                                
+
                                 contact.department?.let { department ->
                                     ContactDetailItem(
                                         label = "Department",
@@ -242,7 +242,7 @@ fun ContactDetailsDialog(
                             }
                         }
                     }
-                    
+
                     // Phone Numbers
                     if (contact.phoneNumbers.isNotEmpty()) {
                         item {
@@ -260,7 +260,7 @@ fun ContactDetailsDialog(
                             }
                         }
                     }
-                    
+
                     // Email Addresses
                     if (contact.emails.isNotEmpty()) {
                         item {
@@ -277,7 +277,7 @@ fun ContactDetailsDialog(
                             }
                         }
                     }
-                    
+
                     // Contact Groups
                     if (contact.groups.isNotEmpty()) {
                         item {
@@ -292,7 +292,7 @@ fun ContactDetailsDialog(
                             }
                         }
                     }
-                    
+
                     // Additional Info
                     item {
                         ContactDetailSection(
@@ -303,14 +303,14 @@ fun ContactDetailsDialog(
                                 label = "Contact ID",
                                 value = contact.id
                             )
-                            
+
                             contact.photoUri?.let { uri ->
                                 ContactDetailItem(
                                     label = "Has Photo",
                                     value = "Yes"
                                 )
                             }
-                            
+
                             contact.lastModified?.let { timestamp ->
                                 ContactDetailItem(
                                     label = "Last Modified",
@@ -348,15 +348,15 @@ private fun ContactDetailSection(
                 color = MaterialTheme.colorScheme.primary
             )
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         Column(
             modifier = Modifier.padding(start = 24.dp)
         ) {
             content()
         }
-        
+
         Spacer(modifier = Modifier.height(16.dp))
     }
 }
@@ -379,9 +379,9 @@ private fun ContactDetailItem(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.weight(1f)
         )
-        
+
         Spacer(modifier = Modifier.width(16.dp))
-        
+
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,

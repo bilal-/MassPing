@@ -3,29 +3,29 @@
     android:height="108dp"
     android:viewportWidth="150"
     android:viewportHeight="150">
-    
+
     <!-- Exact App Icon design from SVG - centered at 75,75 -->
     <!-- Signal waves (outermost) -->
     <path android:strokeColor="#ffffff"
         android:strokeWidth="4"
         android:strokeAlpha="0.7"
         android:pathData="M 35,105 Q 35,45 75,45 Q 115,45 115,105" />
-    
+
     <!-- Signal waves (middle) -->
     <path android:strokeColor="#ffffff"
         android:strokeWidth="5"
         android:strokeAlpha="0.9"
         android:pathData="M 50,95 Q 50,65 75,65 Q 100,65 100,95" />
-    
+
     <!-- Center antenna/signal line -->
     <path android:strokeColor="#ffffff"
         android:strokeWidth="6"
         android:pathData="M 75,110 L 75,90" />
-    
+
     <!-- Center transmission dot -->
     <path android:fillColor="#ffffff"
         android:pathData="M75,120 m-8,0 a8,8 0 1,1 16,0 a8,8 0 1,1 -16,0" />
-    
+
     <!-- Team member dots exactly as in SVG -->
     <path android:fillColor="#ffffff"
         android:fillAlpha="0.9"
@@ -36,5 +36,5 @@
     <path android:fillColor="#ffffff"
         android:fillAlpha="0.9"
         android:pathData="M75,50 m-6,0 a6,6 0 1,1 12,0 a6,6 0 1,1 -12,0" />
-        
+
 </vector>

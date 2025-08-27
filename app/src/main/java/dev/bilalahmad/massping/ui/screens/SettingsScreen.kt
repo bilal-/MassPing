@@ -51,20 +51,20 @@ fun SettingsScreen(viewModel: MainViewModel) {
     val contacts by viewModel.contacts.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
-    
+
     var showAccountDialog by remember { mutableStateOf(false) }
-    
+
     LaunchedEffect(uiState.error) {
         uiState.error?.let { error ->
             snackbarHostState.showSnackbar(error)
             viewModel.clearError()
         }
     }
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         "Settings",
                         style = MaterialTheme.typography.headlineMedium,
@@ -103,9 +103,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     if (selectedAccounts.isNotEmpty()) {
                         Text(
                             "Active Accounts",
@@ -113,9 +113,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.primary
                         )
-                        
+
                         Spacer(modifier = Modifier.height(8.dp))
-                        
+
                         selectedAccounts.forEach { account ->
                             Row(
                                 modifier = Modifier.padding(vertical = 2.dp),
@@ -138,10 +138,10 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                 )
                             }
                         }
-                        
+
                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -152,7 +152,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                         ) {
                             Text("Select Accounts")
                         }
-                        
+
                         Button(
                             onClick = { viewModel.syncContacts() },
                             modifier = Modifier.weight(1f)
@@ -171,9 +171,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(20.dp))
-            
+
             // Contact Statistics Section
             Card(
                 modifier = Modifier.fillMaxWidth()
@@ -195,9 +195,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             fontWeight = FontWeight.Bold
                         )
                     }
-                    
+
                     Spacer(modifier = Modifier.height(16.dp))
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceEvenly
@@ -207,13 +207,13 @@ fun SettingsScreen(viewModel: MainViewModel) {
                             value = "${contacts.size}",
                             icon = "👥"
                         )
-                        
+
                         StatisticItem(
                             label = "Groups",
                             value = "${contactGroups.size}",
                             icon = "📁"
                         )
-                        
+
                         StatisticItem(
                             label = "Mobile Numbers",
                             value = "${contacts.count { it.mobilePhone != null }}",
@@ -222,9 +222,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                     }
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(20.dp))
-            
+
             // Contact Groups Section (if any)
             if (contactGroups.isNotEmpty()) {
                 Card(
@@ -247,9 +247,9 @@ fun SettingsScreen(viewModel: MainViewModel) {
                                 fontWeight = FontWeight.Bold
                             )
                         }
-                        
+
                         Spacer(modifier = Modifier.height(16.dp))
-                        
+
                         // Show all contact groups sorted by size
                         contactGroups.sortedByDescending { it.contactIds.size }.forEach { group ->
                             Row(
@@ -276,7 +276,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 }
             }
         }
-        
+
         // Account Selection Dialog
         if (showAccountDialog) {
             AccountSelectionDialog(

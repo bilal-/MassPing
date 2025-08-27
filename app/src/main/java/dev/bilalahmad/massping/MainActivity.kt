@@ -16,19 +16,19 @@ import dev.bilalahmad.massping.ui.theme.MassPingTheme
 import dev.bilalahmad.massping.ui.viewmodels.MainViewModel
 
 class MainActivity : ComponentActivity() {
-    
+
     companion object {
         private const val TAG = "MainActivity"
     }
-    
+
     private val viewModel: MainViewModel by viewModels()
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         Log.d(TAG, "MainActivity onCreate called")
-        
+
         // Install splash screen before calling super.onCreate()
         installSplashScreen()
-        
+
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         Log.d(TAG, "About to create MassPingApp with viewModel")

@@ -23,15 +23,15 @@ data class Contact(
 ) {
     val displayName: String
         get() = nickname?.takeIf { it.isNotBlank() } ?: name
-    
+
     val primaryPhone: String?
-        get() = phoneNumbers.firstOrNull { it.isPrimary }?.number 
-            ?: phoneNumbers.firstOrNull { it.isMobile }?.number 
+        get() = phoneNumbers.firstOrNull { it.isPrimary }?.number
+            ?: phoneNumbers.firstOrNull { it.isMobile }?.number
             ?: phoneNumbers.firstOrNull()?.number
-    
+
     val mobilePhone: String?
         get() = phoneNumbers.firstOrNull { it.isMobile }?.number
-    
+
     val primaryEmail: String?
         get() = emails.firstOrNull { it.isPrimary }?.address ?: emails.firstOrNull()?.address
 }
@@ -43,7 +43,7 @@ data class ContactPhone(
     val isPrimary: Boolean = false
 ) {
     val isMobile: Boolean
-        get() = type.contains("Mobile", ignoreCase = true) || 
+        get() = type.contains("Mobile", ignoreCase = true) ||
                 type.contains("Cell", ignoreCase = true) ||
                 label?.contains("Mobile", ignoreCase = true) == true ||
                 label?.contains("Cell", ignoreCase = true) == true

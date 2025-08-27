@@ -9,10 +9,10 @@ data class ContactAccount(
     val type: String,
     val displayName: String = name
 ) : Parcelable {
-    
+
     val isGoogleAccount: Boolean
         get() = type == "com.google"
-    
+
     val accountTypeDisplayName: String
         get() = when (type) {
             "com.google" -> "Google"

@@ -39,11 +39,11 @@ import java.util.Locale
 fun MessagesScreen(viewModel: MainViewModel) {
     val messages by viewModel.messages.collectAsState()
     val individualMessages by viewModel.individualMessages.collectAsState()
-    
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
+                title = {
                     Text(
                         "Messages",
                         style = MaterialTheme.typography.headlineMedium,
@@ -126,24 +126,24 @@ private fun MessageItem(
                         style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     Spacer(modifier = Modifier.height(4.dp))
-                    
+
                     Text(
                         message.template,
                         style = MaterialTheme.typography.bodyMedium,
                         maxLines = 3
                     )
-                    
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     Text(
                         "Recipients: ${individualMessages.size}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                
+
                 if (individualMessages.isNotEmpty()) {
                     Button(
                         onClick = onSendMessage,
@@ -153,24 +153,24 @@ private fun MessageItem(
                     }
                 }
             }
-            
+
             if (individualMessages.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
-                
-                val sentCount = individualMessages.count { 
-                    it.status == IndividualMessageStatus.SENT 
+
+                val sentCount = individualMessages.count {
+                    it.status == IndividualMessageStatus.SENT
                 }
-                val deliveredCount = individualMessages.count { 
-                    it.status == IndividualMessageStatus.DELIVERED 
+                val deliveredCount = individualMessages.count {
+                    it.status == IndividualMessageStatus.DELIVERED
                 }
-                val failedCount = individualMessages.count { 
-                    it.status == IndividualMessageStatus.FAILED 
+                val failedCount = individualMessages.count {
+                    it.status == IndividualMessageStatus.FAILED
                 }
-                val pendingCount = individualMessages.count { 
+                val pendingCount = individualMessages.count {
                     it.status == IndividualMessageStatus.PENDING ||
                     it.status == IndividualMessageStatus.SENDING
                 }
-                
+
                 // Progress indicators
                 Column {
                     Row(
@@ -186,14 +186,14 @@ private fun MessageItem(
                             style = MaterialTheme.typography.bodySmall
                         )
                     }
-                    
+
                     LinearProgressIndicator(
                         progress = (sentCount + deliveredCount).toFloat() / individualMessages.size,
                         modifier = Modifier.fillMaxWidth()
                     )
-                    
+
                     Spacer(modifier = Modifier.height(8.dp))
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -205,7 +205,7 @@ private fun MessageItem(
                                 color = MaterialTheme.colorScheme.error
                             )
                         }
-                        
+
                         if (pendingCount > 0) {
                             Text(
                                 "Pending: $pendingCount",

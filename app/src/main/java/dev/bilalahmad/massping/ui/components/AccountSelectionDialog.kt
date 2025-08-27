@@ -35,10 +35,10 @@ fun AccountSelectionDialog(
     onAccountSelectionChanged: (List<ContactAccount>) -> Unit,
     onDismiss: () -> Unit
 ) {
-    var tempSelectedAccounts by remember { 
-        mutableStateOf(selectedAccounts) 
+    var tempSelectedAccounts by remember {
+        mutableStateOf(selectedAccounts)
     }
-    
+
     Dialog(onDismissRequest = onDismiss) {
         Card(
             modifier = Modifier
@@ -54,17 +54,17 @@ fun AccountSelectionDialog(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Text(
                     text = "Choose which accounts to sync contacts from:",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 LazyColumn(
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
@@ -82,9 +82,9 @@ fun AccountSelectionDialog(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -92,9 +92,9 @@ fun AccountSelectionDialog(
                     TextButton(onClick = onDismiss) {
                         Text("Cancel")
                     }
-                    
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    
+
                     TextButton(
                         onClick = {
                             onAccountSelectionChanged(tempSelectedAccounts)
@@ -125,16 +125,16 @@ private fun AccountItem(
             checked = isSelected,
             onCheckedChange = onSelectionChanged
         )
-        
+
         Spacer(modifier = Modifier.width(12.dp))
-        
+
         Column {
             Text(
                 text = account.displayName,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.Medium
             )
-            
+
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -142,9 +142,9 @@ private fun AccountItem(
                     text = getAccountIcon(account),
                     style = MaterialTheme.typography.bodySmall
                 )
-                
+
                 Spacer(modifier = Modifier.width(4.dp))
-                
+
                 Text(
                     text = account.accountTypeDisplayName,
                     style = MaterialTheme.typography.bodySmall,

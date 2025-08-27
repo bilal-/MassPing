@@ -51,26 +51,26 @@ fun PermissionScreen(
                     text = "🔐",
                     style = MaterialTheme.typography.displayLarge
                 )
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text(
                     text = "Permissions Needed",
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold
                 )
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 Text(
                     text = "MassPing needs these permissions to function properly:",
                     style = MaterialTheme.typography.bodyMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 LazyColumn {
                     items(missingPermissions) { permission ->
                         PermissionItem(
@@ -79,27 +79,27 @@ fun PermissionScreen(
                         )
                     }
                 }
-                
+
                 Spacer(modifier = Modifier.height(24.dp))
-                
+
                 Button(
                     onClick = onRequestPermissions,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Grant Permissions")
                 }
-                
+
                 Spacer(modifier = Modifier.height(8.dp))
-                
+
                 OutlinedButton(
                     onClick = onSkip,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Skip for Now")
                 }
-                
+
                 Spacer(modifier = Modifier.height(16.dp))
-                
+
                 Text(
                     text = "You can change these permissions later in your device settings.",
                     style = MaterialTheme.typography.bodySmall,
@@ -127,7 +127,7 @@ private fun PermissionItem(
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(end = 12.dp, top = 2.dp)
         )
-        
+
         Column(
             modifier = Modifier.weight(1f)
         ) {
@@ -136,7 +136,7 @@ private fun PermissionItem(
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold
             )
-            
+
             Text(
                 text = explanation,
                 style = MaterialTheme.typography.bodySmall,

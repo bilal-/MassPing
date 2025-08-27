@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-08-26
+
+### Changed
+- Initial 1.0.0 release of Mass Ping
+
+
 ## [1.0.0] - 2024-08-27
 
 ### Added
@@ -33,5 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Min SDK**: Android 10 (API 29)
 - **Target SDK**: Android 14 (API 36)
 
-[Unreleased]: https://github.com/bilal-/MassPing/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/bilal-/MassPing/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/bilal-/MassPing/releases/tag/v2.0.0
 [1.0.0]: https://github.com/bilal-/MassPing/releases/tag/v1.0.0

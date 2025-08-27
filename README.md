@@ -1,7 +1,7 @@
 # MassPing
 
 **Author:** Bilal Ahmad
-**Version:** 1.2.0
+**Version:** 1.0.1
 **Platform:** Android (API 29+)
 
 A powerful Android application for sending personalized bulk SMS messages to your contacts. MassPing integrates with your Google contacts and local device contacts to enable efficient mass messaging with personalization features.

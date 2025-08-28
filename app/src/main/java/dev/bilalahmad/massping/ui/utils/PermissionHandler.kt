@@ -69,12 +69,23 @@ class PermissionHandler(
     }
 
     fun checkAndRequestPermissions() {
-        val missingRuntimePermissions = RUNTIME_PERMISSIONS.filter {
+        // Only request essential permissions initially
+        val missingEssentialPermissions = ESSENTIAL_PERMISSIONS.filter {
             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
         }
 
-        if (missingRuntimePermissions.isNotEmpty()) {
-            launcher(missingRuntimePermissions.toTypedArray())
+        if (missingEssentialPermissions.isNotEmpty()) {
+            launcher(missingEssentialPermissions.toTypedArray())
+        }
+    }
+
+    fun checkAndRequestOptionalPermissions() {
+        val missingOptionalPermissions = OPTIONAL_PERMISSIONS.filter {
+            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
+        }
+
+        if (missingOptionalPermissions.isNotEmpty()) {
+            launcher(missingOptionalPermissions.toTypedArray())
         }
     }
 

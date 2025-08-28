@@ -84,7 +84,7 @@ fun ContactDetailsDialog(
                             onClick = {
                                 fun editContact() {
                                     android.util.Log.d("ContactDetailsDialog", "Attempting to edit contact: ${contact.name} (ID: ${contact.id})")
-                                    
+
                                     // Try multiple approaches to find and edit the specific contact
                                     val editStrategies = listOf(
                                         // Strategy 1: Modern ContactsContract URI with lookup key

@@ -237,7 +237,7 @@ class MassPingRepository(private val context: Context) {
 
     fun generatePersonalizedMessages(messageId: String): List<IndividualMessage> {
         val message = _messages.value.find { it.id == messageId } ?: return emptyList()
-        
+
         // Handle both group selection and individual contact selection
         val contacts = if (message.individualContacts.isNotEmpty()) {
             // Individual contact selection mode

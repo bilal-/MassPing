@@ -28,7 +28,7 @@ data class Contact(
         get() {
             // Prefer in this order: primary -> mobile -> any valid number
             return phoneNumbers.firstOrNull { it.isPrimary && it.number.isNotBlank() }?.number
-                ?: phoneNumbers.firstOrNull { it.isMobile && it.number.isNotBlank() }?.number  
+                ?: phoneNumbers.firstOrNull { it.isMobile && it.number.isNotBlank() }?.number
                 ?: phoneNumbers.firstOrNull { it.number.isNotBlank() }?.number
         }
 

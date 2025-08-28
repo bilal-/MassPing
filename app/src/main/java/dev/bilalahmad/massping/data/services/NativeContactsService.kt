@@ -326,7 +326,7 @@ class NativeContactsService(private val context: Context) {
 
     private fun normalizePhoneNumber(rawNumber: String?): String {
         if (rawNumber.isNullOrBlank()) return ""
-        
+
         // Remove all whitespace and common separators, but preserve + and digits
         var cleaned = rawNumber.replace("\\s".toRegex(), "") // Remove spaces
             .replace("-".toRegex(), "") // Remove dashes
@@ -334,10 +334,10 @@ class NativeContactsService(private val context: Context) {
             .replace("\\)".toRegex(), "") // Remove closing parentheses
             .replace("\\.".toRegex(), "") // Remove periods
             .trim()
-        
+
         // Keep only digits, +, and # (for extensions)
         cleaned = cleaned.replace("[^\\d+#]".toRegex(), "")
-        
+
         // Handle US numbers - ensure they have country code
         if (cleaned.matches("^\\d{10}$".toRegex())) {
             // 10-digit US number, add +1
@@ -349,7 +349,7 @@ class NativeContactsService(private val context: Context) {
             // 11-digit number starting with 1, add +
             cleaned = "+$cleaned"
         }
-        
+
         Log.d("NativeContactsService", "Normalized phone: '$rawNumber' -> '$cleaned'")
         return cleaned
     }

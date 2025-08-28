@@ -68,7 +68,7 @@ fun ContactsScreen(
     var selectedGroupId by remember { mutableStateOf<String?>(null) }
     var showGroupDropdown by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
-    
+
     // Selection states
     var selectedContactIds by remember { mutableStateOf(setOf<String>()) }
 
@@ -181,11 +181,11 @@ fun ContactsScreen(
                                 )
                             }
                         }
-                        
+
                         if (selectedContactIds.isNotEmpty()) {
                             // Select All / Clear All button when in selection mode
                             Button(
-                                onClick = { 
+                                onClick = {
                                     selectedContactIds = if (selectedContactIds.size == filteredContacts.size) {
                                         emptySet()
                                     } else {
@@ -202,7 +202,7 @@ fun ContactsScreen(
                     }
                 }
             }
-            
+
             // Content area
             if (filteredContacts.isEmpty() && !uiState.isLoading) {
                 Box(
@@ -396,11 +396,11 @@ fun ContactsScreen(
                 }
             }
         }
-        
+
         // Floating Action Button
         if (selectedContactIds.isNotEmpty()) {
             FloatingActionButton(
-                onClick = { 
+                onClick = {
                     onSendMessage(selectedContactIds.toList())
                     selectedContactIds = emptySet() // Clear selection after sending
                 },
@@ -447,9 +447,9 @@ private fun ContactItem(
                     checked = isSelected,
                     onCheckedChange = onSelectionChange
                 )
-                
+
                 Spacer(modifier = Modifier.width(8.dp))
-                
+
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {

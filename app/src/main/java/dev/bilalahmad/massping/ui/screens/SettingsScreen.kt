@@ -78,7 +78,7 @@ fun SettingsScreen(viewModel: MainViewModel) {
                 )
             }
         }
-        
+
         // Content area
         Column(
             modifier = Modifier

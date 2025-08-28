@@ -2,7 +2,7 @@
 
 **Author:** Bilal
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 
 **Platform:** Android (API 29+)
 

@@ -25,9 +25,12 @@ data class Contact(
         get() = nickname?.takeIf { it.isNotBlank() } ?: name
 
     val primaryPhone: String?
-        get() = phoneNumbers.firstOrNull { it.isPrimary }?.number
-            ?: phoneNumbers.firstOrNull { it.isMobile }?.number
-            ?: phoneNumbers.firstOrNull()?.number
+        get() {
+            // Prefer in this order: primary -> mobile -> any valid number
+            return phoneNumbers.firstOrNull { it.isPrimary && it.number.isNotBlank() }?.number
+                ?: phoneNumbers.firstOrNull { it.isMobile && it.number.isNotBlank() }?.number  
+                ?: phoneNumbers.firstOrNull { it.number.isNotBlank() }?.number
+        }
 
     val mobilePhone: String?
         get() = phoneNumbers.firstOrNull { it.isMobile }?.number

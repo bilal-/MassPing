@@ -21,9 +21,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -45,17 +43,21 @@ import kotlinx.coroutines.launch
 @Composable
 fun NewMessageScreen(
     viewModel: MainViewModel,
+    preselectedContactIds: List<String> = emptyList(),
     onMessageCreated: () -> Unit = {}
 ) {
     val contactGroups by viewModel.contactGroups.collectAsState()
     val contacts by viewModel.contacts.collectAsState()
+    val copiedTemplate by viewModel.copiedTemplate.collectAsState()
 
     var messageTemplate by remember { mutableStateOf("") }
     var selectedGroupIds by remember { mutableStateOf(setOf<String>()) }
-    var selectedContactIds by remember { mutableStateOf(setOf<String>()) }
+    var selectedContactIds by remember { mutableStateOf(preselectedContactIds.toSet()) }
     var showPreview by remember { mutableStateOf(false) }
     var previewMessages by remember { mutableStateOf(emptyList<Pair<Contact, String>>()) }
-    var recipientSelectionMode by remember { mutableStateOf("groups") } // "groups" or "contacts"
+    var recipientSelectionMode by remember {
+        mutableStateOf(if (preselectedContactIds.isNotEmpty()) "contacts" else "groups")
+    }
 
     val placeholders = remember { viewModel.getAvailablePlaceholders() }
     val listState = rememberLazyListState()
@@ -71,24 +73,38 @@ fun NewMessageScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "New Message",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            )
+    // Check for copied template when copiedTemplate changes
+    LaunchedEffect(copiedTemplate) {
+        copiedTemplate?.let { template ->
+            messageTemplate = template
+            viewModel.clearCopiedTemplate()
         }
-    ) { paddingValues ->
+    }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Title section
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    "New Message",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        // Content area
         if (contacts.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -116,9 +132,48 @@ fun NewMessageScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
                     .padding(16.dp)
             ) {
+                // Pre-selected contacts info card
+                if (preselectedContactIds.isNotEmpty()) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
+                            ) {
+                                Text(
+                                    "✅ Contacts Selected",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "${preselectedContactIds.size} contacts selected from Contacts tab",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                // Show names of pre-selected contacts
+                                val preselectedContacts = contacts.filter { it.id in preselectedContactIds }
+                                if (preselectedContacts.isNotEmpty()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        preselectedContacts.take(3).joinToString(", ") { it.name } +
+                                        if (preselectedContacts.size > 3) " and ${preselectedContacts.size - 3} more..." else "",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+                }
+
                 // Message Template Section
                 item {
                     Card(
@@ -133,7 +188,22 @@ fun NewMessageScreen(
                                 fontWeight = FontWeight.Bold
                             )
 
+                            // Show template copied feedback
+                            if (copiedTemplate != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    "📋 Template copied from message history!",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.secondary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
                             Spacer(modifier = Modifier.height(8.dp))
+
+                            val messageLength = messageTemplate.length
+                            val willBeSplit = messageLength > 160
+                            val estimatedParts = if (willBeSplit) (messageLength / 150) + 1 else 1 // Roughly estimate parts
 
                             OutlinedTextField(
                                 value = messageTemplate,
@@ -141,7 +211,21 @@ fun NewMessageScreen(
                                 label = { Text("Your message") },
                                 modifier = Modifier.fillMaxWidth(),
                                 minLines = 3,
-                                placeholder = { Text("Hi {name}, how are you doing?") }
+                                placeholder = { Text("Hi {name}, how are you doing?") },
+                                supportingText = {
+                                    Text(
+                                        if (willBeSplit) {
+                                            "$messageLength characters • Will be split into ~$estimatedParts parts"
+                                        } else {
+                                            "$messageLength characters"
+                                        },
+                                        color = if (willBeSplit) {
+                                            MaterialTheme.colorScheme.tertiary
+                                        } else {
+                                            MaterialTheme.colorScheme.onSurfaceVariant
+                                        }
+                                    )
+                                }
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -256,7 +340,7 @@ fun NewMessageScreen(
                                             fontWeight = FontWeight.SemiBold
                                         )
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        
+
                                         // Add select all / deselect all buttons
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
@@ -275,9 +359,9 @@ fun NewMessageScreen(
                                                 Text("Clear All")
                                             }
                                         }
-                                        
+
                                         Spacer(modifier = Modifier.height(8.dp))
-                                        
+
                                         contacts.sortedBy { it.name }.forEach { contact ->
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
@@ -352,7 +436,7 @@ fun NewMessageScreen(
                                 }
                                 showPreview = true
                             },
-                            enabled = messageTemplate.isNotBlank() && 
+                            enabled = messageTemplate.isNotBlank() &&
                                     ((recipientSelectionMode == "groups" && selectedGroupIds.isNotEmpty()) ||
                                      (recipientSelectionMode == "contacts" && selectedContactIds.isNotEmpty())),
                             modifier = Modifier.weight(1f)
@@ -392,7 +476,7 @@ fun NewMessageScreen(
                                 // Navigate to Messages tab
                                 onMessageCreated()
                             },
-                            enabled = messageTemplate.isNotBlank() && 
+                            enabled = messageTemplate.isNotBlank() &&
                                     ((recipientSelectionMode == "groups" && selectedGroupIds.isNotEmpty()) ||
                                      (recipientSelectionMode == "contacts" && selectedContactIds.isNotEmpty())),
                             modifier = Modifier.weight(1f)

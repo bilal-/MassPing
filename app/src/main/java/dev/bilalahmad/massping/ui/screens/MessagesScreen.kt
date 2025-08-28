@@ -17,9 +17,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.bilalahmad.massping.data.models.IndividualMessage
 import dev.bilalahmad.massping.data.models.IndividualMessageStatus
 import dev.bilalahmad.massping.data.models.Message
 import dev.bilalahmad.massping.ui.components.MessageHistoryItem
@@ -37,29 +36,39 @@ import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MessagesScreen(viewModel: MainViewModel) {
+fun MessagesScreen(
+    viewModel: MainViewModel,
+    onNavigateToNewMessage: () -> Unit = {}
+) {
     val messages by viewModel.messages.collectAsState()
     val individualMessages by viewModel.individualMessages.collectAsState()
     val messageHistory by viewModel.messageHistory.collectAsState(initial = emptyList())
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        "Messages",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            )
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        // Title section
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Text(
+                    "Messages",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
         }
-    ) { paddingValues ->
+
+        // Content area
         if (messages.isEmpty() && messageHistory.isEmpty()) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -86,7 +95,8 @@ fun MessagesScreen(viewModel: MainViewModel) {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Current pending messages
                 if (messages.isNotEmpty()) {
@@ -118,7 +128,16 @@ fun MessagesScreen(viewModel: MainViewModel) {
                         )
                     }
                     items(messageHistory) { historyItem ->
-                        MessageHistoryItem(messageHistory = historyItem)
+                        MessageHistoryItem(
+                            messageHistory = historyItem,
+                            onDelete = { messageId ->
+                                viewModel.deleteMessageHistory(messageId)
+                            },
+                            onCopyTemplate = { template ->
+                                viewModel.copyMessageTemplate(template)
+                                onNavigateToNewMessage()
+                            }
+                        )
                     }
                 }
             }
@@ -129,7 +148,7 @@ fun MessagesScreen(viewModel: MainViewModel) {
 @Composable
 private fun MessageItem(
     message: Message,
-    individualMessages: List<dev.bilalahmad.massping.data.models.IndividualMessage>,
+    individualMessages: List<IndividualMessage>,
     onSendMessage: () -> Unit
 ) {
     Card(
@@ -227,6 +246,32 @@ private fun MessageItem(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    // Show detailed current sending status
+                    val currentlySending = individualMessages.find { it.status == IndividualMessageStatus.SENDING }
+                    if (currentlySending != null) {
+                        val (currentPart, totalParts) = getPartInfo(individualMessages, currentlySending)
+                        Text(
+                            "Sending to ${currentlySending.phoneNumber} (Part $currentPart/$totalParts)",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Show remaining total
+                        val totalRemaining = pendingCount + sendingCount
+                        if (totalRemaining > 0) {
+                            Text(
+                                "$totalRemaining messages remaining",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -269,4 +314,24 @@ private fun MessageItem(
             }
         }
     }
+}
+
+private fun getPartInfo(allMessages: List<IndividualMessage>, currentMessage: IndividualMessage): Pair<Int, Int> {
+    // Get all messages for the same phone number
+    val messagesForSameNumber = allMessages.filter { it.phoneNumber == currentMessage.phoneNumber }
+
+    // Sort them by part number
+    val sortedMessages = messagesForSameNumber.sortedBy { message ->
+        if (message.id.contains("-part")) {
+            message.id.substringAfterLast("part").toIntOrNull() ?: 0
+        } else {
+            0 // Single messages come first
+        }
+    }
+
+    val currentIndex = sortedMessages.indexOf(currentMessage)
+    val currentPart = currentIndex + 1
+    val totalParts = sortedMessages.size
+
+    return Pair(currentPart, totalParts)
 }

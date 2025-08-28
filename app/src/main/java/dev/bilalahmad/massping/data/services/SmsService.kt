@@ -9,6 +9,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.PowerManager
 import android.telephony.SmsManager
 import androidx.core.content.ContextCompat
 import dev.bilalahmad.massping.data.models.IndividualMessage
@@ -28,6 +29,8 @@ class SmsService(private val context: Context) {
 
     private val smsManager = context.getSystemService(SmsManager::class.java)
     private val statusUpdatesChannel = Channel<Pair<String, IndividualMessageStatus>>(Channel.UNLIMITED)
+    private val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+    private var wakeLock: PowerManager.WakeLock? = null
 
     val statusUpdates: Flow<Pair<String, IndividualMessageStatus>> = statusUpdatesChannel.receiveAsFlow()
 
@@ -165,7 +168,14 @@ class SmsService(private val context: Context) {
             android.util.Log.d("SmsService", "Calling smsManager.sendTextMessage for: ${message.id}")
             android.util.Log.d("SmsService", "SMS Details - To: ${message.phoneNumber}, Length: ${message.personalizedContent.length} chars")
             android.util.Log.d("SmsService", "SMS Content Preview: ${message.personalizedContent.take(50)}...")
-            
+
+            // Additional phone number validation (basic validation already done above)
+            if (!isValidPhoneNumber(message.phoneNumber)) {
+                android.util.Log.e("SmsService", "Invalid phone number format: '${message.phoneNumber}' for message: ${message.id}")
+                statusUpdatesChannel.trySend(message.id to IndividualMessageStatus.FAILED)
+                return
+            }
+
             smsManager.sendTextMessage(
                 message.phoneNumber,
                 null,
@@ -194,10 +204,56 @@ class SmsService(private val context: Context) {
     }
 
     suspend fun sendBatchWithDelay(messages: List<IndividualMessage>, delayBetweenMessages: Long = 2000L, timeoutSeconds: Long = 10L) {
-        messages.forEach { message ->
-            sendSms(message, timeoutSeconds)
-            // Add delay between messages to prevent carrier blocking
-            kotlinx.coroutines.delay(delayBetweenMessages)
+        android.util.Log.d("SmsService", "Starting batch send of ${messages.size} messages with wake lock")
+
+        // Group messages by phone number to send all parts for one recipient before moving to next
+        val messagesByRecipient = messages.groupBy { it.phoneNumber }
+        android.util.Log.d("SmsService", "Grouped messages for ${messagesByRecipient.size} recipients")
+
+        // Acquire wake lock to keep screen on during SMS sending
+        wakeLock = powerManager.newWakeLock(
+            PowerManager.SCREEN_DIM_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
+            "MassPing::SMSSending"
+        ).apply {
+            acquire(messages.size * (delayBetweenMessages + timeoutSeconds * 1000L) + 30000L) // Extra 30s buffer
+            android.util.Log.d("SmsService", "Wake lock acquired for SMS batch sending")
+        }
+
+        try {
+            messagesByRecipient.forEach { (phoneNumber, recipientMessages) ->
+                android.util.Log.d("SmsService", "Sending ${recipientMessages.size} message part(s) to $phoneNumber")
+
+                // Sort parts by ID to maintain order (part1, part2, etc.)
+                val sortedMessages = recipientMessages.sortedBy { message ->
+                    if (message.id.contains("-part")) {
+                        message.id.substringAfterLast("part").toIntOrNull() ?: 0
+                    } else {
+                        0 // Single messages come first
+                    }
+                }
+
+                sortedMessages.forEachIndexed { index, message ->
+                    android.util.Log.d("SmsService", "Sending part ${index + 1}/${sortedMessages.size} to $phoneNumber")
+                    sendSms(message, timeoutSeconds)
+
+                    // Add shorter delay between parts for same recipient, longer delay between recipients
+                    val delay = if (index < sortedMessages.size - 1) {
+                        delayBetweenMessages / 2 // Shorter delay between parts
+                    } else {
+                        delayBetweenMessages // Full delay before next recipient
+                    }
+                    kotlinx.coroutines.delay(delay)
+                }
+            }
+        } finally {
+            // Release wake lock after sending is complete
+            wakeLock?.let {
+                if (it.isHeld) {
+                    it.release()
+                    android.util.Log.d("SmsService", "Wake lock released after SMS batch sending")
+                }
+            }
+            wakeLock = null
         }
     }
 
@@ -208,6 +264,27 @@ class SmsService(private val context: Context) {
         } catch (e: Exception) {
             // Receivers might already be unregistered
         }
+
+        // Release wake lock if still held
+        wakeLock?.let {
+            if (it.isHeld) {
+                it.release()
+                android.util.Log.d("SmsService", "Wake lock released during cleanup")
+            }
+        }
+        wakeLock = null
+
         statusUpdatesChannel.close()
+    }
+
+    private fun isValidPhoneNumber(phoneNumber: String): Boolean {
+        // Basic phone number validation
+        // Should have at least 10 digits and may start with + for country code
+        val digitsOnly = phoneNumber.replace("[^\\d]".toRegex(), "")
+        return when {
+            phoneNumber.startsWith("+") && digitsOnly.length >= 10 -> true
+            !phoneNumber.startsWith("+") && digitsOnly.length >= 10 -> true
+            else -> false
+        }
     }
 }

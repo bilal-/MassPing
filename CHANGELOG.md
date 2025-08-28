@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Intelligent SMS message splitting with natural boundary detection
+- Real-time progress tracking showing current recipient and message part
+- Wake lock functionality to keep screen on during SMS sending
+- Auto-navigation to New Message tab when editing templates
+- Enhanced message composition with unlimited character input
+- Sequential message part delivery per recipient
+
+### Changed
+- Removed 160-character limit from message composition UI
+- Enhanced progress display with detailed sending status
+- Improved template copying and editing workflow
+- Better phone number validation and normalization
+
+### Fixed
+- Template editing issues when copying long messages from history
+- LaunchedEffect dependency causing state update problems
+- Trailing whitespace cleanup across all source files
+
+### Technical Improvements
+- Added WAKE_LOCK permission for screen management during SMS sending
+- Enhanced MessagePersonalizationService with intelligent text splitting algorithm
+- Updated SmsService with grouped message sending and wake lock functionality
+- Improved UI feedback with real-time "Sending to NUMBER (Part X/Y)" status
+- Better error handling and validation in SMS processing
+
 ## [1.1.0] - 2025-08-27
 
 ### Changed

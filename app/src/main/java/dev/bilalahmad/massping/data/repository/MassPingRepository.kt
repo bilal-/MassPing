@@ -436,6 +436,17 @@ class MassPingRepository(private val context: Context) {
         }
     }
 
+    suspend fun deleteMessageHistory(messageId: String): Result<Unit> {
+        return try {
+            messageHistoryDao.deleteMessageById(messageId)
+            Log.d(TAG, "Successfully deleted message history: $messageId")
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error deleting message history: $messageId", e)
+            Result.failure(e)
+        }
+    }
+
     fun clearCompletedMessages() {
         // Remove messages where all individual messages are either sent, delivered, or failed (no pending or sending)
         val messagesToKeep = _messages.value.filter { message ->

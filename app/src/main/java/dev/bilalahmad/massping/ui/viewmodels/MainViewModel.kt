@@ -31,6 +31,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow(MainUiState())
     val uiState: StateFlow<MainUiState> = _uiState.asStateFlow()
 
+    private val _copiedTemplate = MutableStateFlow<String?>(null)
+    val copiedTemplate: StateFlow<String?> = _copiedTemplate.asStateFlow()
+
     // Data from repository
     val contacts = repository.contacts
     val contactGroups = repository.contactGroups
@@ -137,6 +140,41 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         repository.clearCompletedMessages()
     }
 
+    fun deleteMessageHistory(messageId: String) {
+        viewModelScope.launch {
+            try {
+                val result = repository.deleteMessageHistory(messageId)
+                if (result.isFailure) {
+                    _uiState.value = _uiState.value.copy(
+                        error = "Failed to delete message history: ${result.exceptionOrNull()?.message}"
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    error = "Failed to delete message history: ${e.message}"
+                )
+            }
+        }
+    }
+
+    fun copyMessageTemplate(template: String) {
+        _copiedTemplate.value = template
+    }
+
+    fun useCopiedTemplate(): String? {
+        val template = _copiedTemplate.value
+        _copiedTemplate.value = null // Clear after using
+        return template
+    }
+
+    fun clearCopiedTemplate() {
+        _copiedTemplate.value = null
+    }
+
+    fun clearMessage() {
+        _uiState.value = _uiState.value.copy(message = null)
+    }
+
     // SMS Settings
     fun getSmsDelay(): Long = repository.getSmsDelay()
     fun setSmsDelay(delaySeconds: Long) = repository.setSmsDelay(delaySeconds)
@@ -152,5 +190,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
 data class MainUiState(
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val message: String? = null
 )

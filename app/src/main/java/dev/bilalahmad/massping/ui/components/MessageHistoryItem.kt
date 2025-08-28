@@ -1,6 +1,9 @@
 package dev.bilalahmad.massping.ui.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -14,7 +17,9 @@ import java.util.*
 
 @Composable
 fun MessageHistoryItem(
-    messageHistory: MessageHistory
+    messageHistory: MessageHistory,
+    onDelete: (String) -> Unit = {},
+    onCopyTemplate: (String) -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -24,33 +29,66 @@ fun MessageHistoryItem(
         Column(
             modifier = Modifier.padding(16.dp)
         ) {
-            // Header with date
+            // Header with date and actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Top
             ) {
-                Text(
-                    text = SimpleDateFormat("MMM dd, yyyy 'at' HH:mm", Locale.getDefault())
-                        .format(Date(messageHistory.sentAt ?: messageHistory.createdAt)),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = SimpleDateFormat("MMM dd, yyyy 'at' HH:mm", Locale.getDefault())
+                            .format(Date(messageHistory.sentAt ?: messageHistory.createdAt)),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-                // Success indicator
-                val successRate = if (messageHistory.recipientCount > 0) {
-                    (messageHistory.deliveredCount.toFloat() / messageHistory.recipientCount * 100).toInt()
-                } else 0
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Success indicator
+                    val successRate = if (messageHistory.recipientCount > 0) {
+                        (messageHistory.deliveredCount.toFloat() / messageHistory.recipientCount * 100).toInt()
+                    } else 0
 
-                Text(
-                    text = "$successRate%",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = when {
-                        successRate >= 80 -> MaterialTheme.colorScheme.primary
-                        successRate >= 60 -> MaterialTheme.colorScheme.onSurfaceVariant
-                        else -> MaterialTheme.colorScheme.error
+                    Text(
+                        text = "$successRate%",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = when {
+                            successRate >= 80 -> MaterialTheme.colorScheme.primary
+                            successRate >= 60 -> MaterialTheme.colorScheme.onSurfaceVariant
+                            else -> MaterialTheme.colorScheme.error
+                        }
+                    )
+
+                    // Copy template button
+                    IconButton(
+                        onClick = { onCopyTemplate(messageHistory.template) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Copy message template",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
-                )
+
+                    // Delete button
+                    IconButton(
+                        onClick = { onDelete(messageHistory.id) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Delete message history",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))

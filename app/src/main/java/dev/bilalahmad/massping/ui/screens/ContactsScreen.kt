@@ -21,21 +21,21 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.TextField
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,7 +55,10 @@ import dev.bilalahmad.massping.ui.viewmodels.MainViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContactsScreen(viewModel: MainViewModel) {
+fun ContactsScreen(
+    viewModel: MainViewModel,
+    onSendMessage: (List<String>) -> Unit = {}
+) {
     val contacts by viewModel.contacts.collectAsState()
     val contactGroups by viewModel.contactGroups.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
@@ -65,6 +68,9 @@ fun ContactsScreen(viewModel: MainViewModel) {
     var selectedGroupId by remember { mutableStateOf<String?>(null) }
     var showGroupDropdown by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    
+    // Selection states
+    var selectedContactIds by remember { mutableStateOf(setOf<String>()) }
 
     // Filter contacts by selected group and search query
     val filteredContacts = remember(contacts, selectedGroupId, searchQuery) {
@@ -137,36 +143,74 @@ fun ContactsScreen(viewModel: MainViewModel) {
         }
     }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = {
-                    Column {
-                        Text(
-                            "Contacts (${filteredContacts.size})",
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Bold
-                        )
-                        if (selectedGroupId != null) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Main content
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Title section
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                "Filtered by: $selectedGroupName",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                "Contacts (${filteredContacts.size})",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold
                             )
+                            if (selectedContactIds.isNotEmpty()) {
+                                Text(
+                                    "${selectedContactIds.size} selected",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            } else if (selectedGroupId != null) {
+                                Text(
+                                    "Filtered by: $selectedGroupName",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        if (selectedContactIds.isNotEmpty()) {
+                            // Select All / Clear All button when in selection mode
+                            Button(
+                                onClick = { 
+                                    selectedContactIds = if (selectedContactIds.size == filteredContacts.size) {
+                                        emptySet()
+                                    } else {
+                                        filteredContacts.map { it.id }.toSet()
+                                    }
+                                }
+                            ) {
+                                Text(
+                                    if (selectedContactIds.size == filteredContacts.size) "Clear" else "All",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
                         }
                     }
                 }
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
-    ) { paddingValues ->
-        if (filteredContacts.isEmpty() && !uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
+            }
+            
+            // Content area
+            if (filteredContacts.isEmpty() && !uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
@@ -196,14 +240,13 @@ fun ContactsScreen(viewModel: MainViewModel) {
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    }
                 }
-            }
-        } else {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
+            } else {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                ) {
                 // Search field
                 OutlinedTextField(
                     value = searchQuery,
@@ -338,9 +381,40 @@ fun ContactsScreen(viewModel: MainViewModel) {
                 // Contacts list
                 items(filteredContacts) { contact ->
                     ContactItem(
-                        contact = contact
+                        contact = contact,
+                        isSelected = contact.id in selectedContactIds,
+                        onSelectionChange = { isSelected ->
+                            selectedContactIds = if (isSelected) {
+                                selectedContactIds + contact.id
+                            } else {
+                                selectedContactIds - contact.id
+                            }
+                        }
                     )
                 }
+                    }
+                }
+            }
+        }
+        
+        // Floating Action Button
+        if (selectedContactIds.isNotEmpty()) {
+            FloatingActionButton(
+                onClick = { 
+                    onSendMessage(selectedContactIds.toList())
+                    selectedContactIds = emptySet() // Clear selection after sending
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(16.dp)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send Message")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Send (${selectedContactIds.size})")
                 }
             }
         }
@@ -349,7 +423,9 @@ fun ContactsScreen(viewModel: MainViewModel) {
 
 @Composable
 private fun ContactItem(
-    contact: Contact
+    contact: Contact,
+    isSelected: Boolean = false,
+    onSelectionChange: (Boolean) -> Unit = {}
 ) {
     var showDetailsDialog by remember { mutableStateOf(false) }
 
@@ -366,6 +442,14 @@ private fun ContactItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Selection checkbox
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectionChange
+                )
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
                 Column(
                     modifier = Modifier.weight(1f)
                 ) {

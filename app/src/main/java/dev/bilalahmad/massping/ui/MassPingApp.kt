@@ -2,6 +2,10 @@ package dev.bilalahmad.massping.ui
 
 import android.util.Log
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -18,6 +22,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
 import dev.bilalahmad.massping.R
 import dev.bilalahmad.massping.ui.screens.ContactsScreen
 import dev.bilalahmad.massping.ui.screens.MessagesScreen
@@ -33,6 +39,7 @@ fun MassPingApp(viewModel: MainViewModel) {
     val navController = rememberNavController()
 
     Scaffold(
+            contentWindowInsets = WindowInsets(0, 0, 0, 0), // Remove default insets
             bottomBar = {
                 NavigationBar {
                     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -103,17 +110,57 @@ fun MassPingApp(viewModel: MainViewModel) {
             NavHost(
                 navController = navController,
                 startDestination = "contacts",
-                modifier = Modifier.padding(innerPadding)
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .statusBarsPadding()
             ) {
                 composable("contacts") {
-                    ContactsScreen(viewModel = viewModel)
+                    ContactsScreen(
+                        viewModel = viewModel,
+                        onSendMessage = { selectedContactIds ->
+                            val contactIdsParam = selectedContactIds.joinToString(",")
+                            navController.navigate("new_message?selectedContacts=$contactIdsParam") {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
                 }
                 composable("messages") {
-                    MessagesScreen(viewModel = viewModel)
+                    MessagesScreen(
+                        viewModel = viewModel,
+                        onNavigateToNewMessage = {
+                            navController.navigate("new_message") {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                    )
                 }
-                composable("new_message") {
+                composable(
+                    "new_message?selectedContacts={selectedContacts}",
+                    arguments = listOf(navArgument("selectedContacts") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                        nullable = true
+                    })
+                ) { backStackEntry ->
+                    val selectedContactsParam = backStackEntry.arguments?.getString("selectedContacts")
+                    val preselectedContactIds = if (!selectedContactsParam.isNullOrEmpty()) {
+                        selectedContactsParam.split(",").filter { it.isNotBlank() }
+                    } else {
+                        emptyList()
+                    }
+
                     NewMessageScreen(
                         viewModel = viewModel,
+                        preselectedContactIds = preselectedContactIds,
                         onMessageCreated = {
                             navController.navigate("messages") {
                                 popUpTo(navController.graph.findStartDestination().id) {

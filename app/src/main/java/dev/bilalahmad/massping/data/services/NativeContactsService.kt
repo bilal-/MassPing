@@ -307,18 +307,51 @@ class NativeContactsService(private val context: Context) {
                     context.resources, type, label
                 ).toString()
 
-                phoneNumbers.add(
-                    ContactPhone(
-                        number = number?.replace("[^\\d+]".toRegex(), "") ?: "",
-                        type = typeLabel,
-                        label = label,
-                        isPrimary = isPrimary
+                val cleanNumber = normalizePhoneNumber(number)
+                if (cleanNumber.isNotEmpty()) {
+                    phoneNumbers.add(
+                        ContactPhone(
+                            number = cleanNumber,
+                            type = typeLabel,
+                            label = label,
+                            isPrimary = isPrimary
+                        )
                     )
-                )
+                }
             }
         }
 
         return phoneNumbers
+    }
+
+    private fun normalizePhoneNumber(rawNumber: String?): String {
+        if (rawNumber.isNullOrBlank()) return ""
+        
+        // Remove all whitespace and common separators, but preserve + and digits
+        var cleaned = rawNumber.replace("\\s".toRegex(), "") // Remove spaces
+            .replace("-".toRegex(), "") // Remove dashes
+            .replace("\\(".toRegex(), "") // Remove opening parentheses
+            .replace("\\)".toRegex(), "") // Remove closing parentheses
+            .replace("\\.".toRegex(), "") // Remove periods
+            .trim()
+        
+        // Keep only digits, +, and # (for extensions)
+        cleaned = cleaned.replace("[^\\d+#]".toRegex(), "")
+        
+        // Handle US numbers - ensure they have country code
+        if (cleaned.matches("^\\d{10}$".toRegex())) {
+            // 10-digit US number, add +1
+            cleaned = "+1$cleaned"
+        } else if (cleaned.matches("^1\\d{10}$".toRegex())) {
+            // 11-digit US number starting with 1, add +
+            cleaned = "+$cleaned"
+        } else if (cleaned.startsWith("1") && cleaned.length == 11) {
+            // 11-digit number starting with 1, add +
+            cleaned = "+$cleaned"
+        }
+        
+        Log.d("NativeContactsService", "Normalized phone: '$rawNumber' -> '$cleaned'")
+        return cleaned
     }
 
     private fun getEmailAddresses(contactId: String): List<ContactEmail> {

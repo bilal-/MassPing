@@ -51,13 +51,13 @@ log_error() {
 }
 
 show_usage() {
-    echo "Usage: $0 [patch|minor|major] [release_notes] [--hotfix]"
+    echo "Usage: $0 [patch|minor|major] [--hotfix]"
     echo ""
     echo "Examples:"
-    echo "  $0 patch \"Fix contact loading bug\""
-    echo "  $0 minor \"Add SMS scheduling feature\""
-    echo "  $0 major \"Major UI overhaul\""
-    echo "  $0 patch \"Critical SMS bug fix\" --hotfix"
+    echo "  $0 patch"
+    echo "  $0 minor" 
+    echo "  $0 major"
+    echo "  $0 patch --hotfix"
     echo ""
     echo "Version bumping rules:"
     echo "  patch: 1.0.0 → 1.0.1 (bug fixes)"
@@ -126,10 +126,9 @@ update_build_gradle() {
     log_success "Updated version to $new_version (code: $new_version_code)"
 }
 
-# Add entry to CHANGELOG.md
+# Move unreleased items to new release entry in CHANGELOG.md
 update_changelog() {
     local version="$1"
-    local release_notes="$2"
     local date=$(date +%Y-%m-%d)
 
     log_info "Updating $CHANGELOG..."
@@ -140,39 +139,31 @@ update_changelog() {
     # Create temporary file with new entry
     local temp_file=$(mktemp)
 
-    # Read changelog and insert new version after [Unreleased]
-    awk -v version="$version" -v date="$date" -v notes="$release_notes" '
+    # Move content from [Unreleased] to new version section
+    awk -v version="$version" -v date="$date" '
     /## \[Unreleased\]/ {
         print $0
         print ""
         print "## [" version "] - " date
-        print ""
-        if (notes != "") {
-            print "### Changed"
-            print "- " notes
-            print ""
-        }
-        found_unreleased = 1
+        in_unreleased = 1
         next
     }
-    /## \[.*\] - [0-9]/ && found_unreleased == 1 {
-        found_unreleased = 2
+    /## \[.*\] - [0-9]/ && in_unreleased == 1 {
+        # If we are still in unreleased section and hit another version, end unreleased
+        print ""  # Add blank line before next version
+        in_unreleased = 0
     }
-    /^\[Unreleased\]:/ && found_unreleased == 2 {
+    /^\[Unreleased\]:/ {
         print "[Unreleased]: https://github.com/bilal-/MassPing/compare/v" version "...HEAD"
         print "[" version "]: https://github.com/bilal-/MassPing/releases/tag/v" version
-        found_unreleased = 3
         next
-    }
-    /^\[.*\]:/ && found_unreleased == 3 {
-        found_unreleased = 4
     }
     {
         print $0
     }' "$CHANGELOG" > "$temp_file"
 
     mv "$temp_file" "$CHANGELOG"
-    log_success "Added changelog entry for version $version"
+    log_success "Moved unreleased changes to version $version"
 }
 
 # Update version in README.md
@@ -330,11 +321,28 @@ build_release_artifacts() {
     log_success "  Release AAB: $aab_release_size"
 }
 
+# Extract release notes from CHANGELOG
+get_release_notes() {
+    local version="$1"
+    
+    # Extract content between the version header and the next version header
+    awk -v version="$version" '
+    /## \['"$version"'\] - [0-9]/ {
+        in_version = 1
+        next
+    }
+    /## \[.*\] - [0-9]/ && in_version == 1 {
+        in_version = 0
+    }
+    in_version == 1 && !/^$/ {
+        print $0
+    }' "$CHANGELOG" | sed '/^$/d' # Remove empty lines
+}
+
 # Create GitHub release
 create_github_release() {
     local version="$1"
-    local release_notes="$2"
-    local is_hotfix="$3"
+    local is_hotfix="$2"
 
     log_info "Creating GitHub release v$version..."
 
@@ -345,6 +353,12 @@ create_github_release() {
     local app_name=$(grep "rootProject.name" settings.gradle.kts 2>/dev/null | sed 's/.*"\(.*\)".*/\1/' | tr -d ' ')
     if [ -z "$app_name" ]; then
         app_name="MassPing"  # Fallback if rootProject.name not found
+    fi
+
+    # Get release notes from CHANGELOG
+    local release_notes=$(get_release_notes "$version")
+    if [ -z "$release_notes" ]; then
+        release_notes="Release v$version"
     fi
 
     # Prepare release notes
@@ -458,36 +472,7 @@ push_git_tag() {
     log_success "Tag pushed to GitHub"
 }
 
-# Create git tag and commit
-create_git_release() {
-    local version="$1"
-    local release_notes="$2"
-
-    log_info "Creating git commit and tag..."
-
-    # Add files to git
-    git add "$BUILD_GRADLE" "$CHANGELOG"
-
-    # Commit changes
-    local commit_message="Release v$version"
-    if [ -n "$release_notes" ]; then
-        commit_message="$commit_message
-
-$release_notes
-
-🤖 Generated with [Claude Code](https://claude.ai/code)
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
-    fi
-
-    git commit -m "$commit_message"
-
-    # Create git tag
-    git tag -a "v$version" -m "Release v$version"
-
-    log_success "Created commit and tag v$version"
-    log_info "To push: git push origin main && git push origin v$version"
-}
+# This function is no longer used - release logic moved to main()
 
 # Main function
 main() {
@@ -505,15 +490,11 @@ main() {
 
     # Parse arguments
     local bump_type="$1"
-    local release_notes="$2"
     local is_hotfix=false
 
     # Check for hotfix flag
-    if [ "$3" = "--hotfix" ] || [ "$2" = "--hotfix" ]; then
+    if [ "$2" = "--hotfix" ]; then
         is_hotfix=true
-        if [ "$2" = "--hotfix" ]; then
-            release_notes="$3"
-        fi
     fi
 
     if [ -z "$bump_type" ]; then
@@ -565,14 +546,12 @@ main() {
 
     # Update files on release branch
     update_build_gradle "$new_version" "$new_version_code"
-    update_changelog "$new_version" "$release_notes"
+    update_changelog "$new_version"
     update_readme "$new_version"
 
     # Commit changes to release branch
     git add "$BUILD_GRADLE" "$CHANGELOG" "$README"
     git commit -m "Release v$new_version
-
-$release_notes
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
@@ -592,7 +571,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     build_release_artifacts "$new_version"
 
     # Create GitHub release with APK uploads
-    if create_github_release "$new_version" "$release_notes" "$is_hotfix"; then
+    if create_github_release "$new_version" "$is_hotfix"; then
         log_success "GitHub release published!"
     else
         log_error "Failed to create GitHub release"

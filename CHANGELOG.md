@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2025-08-28
+
 ### Added
 - Intelligent SMS message splitting with natural boundary detection
 - Real-time progress tracking showing current recipient and message part
@@ -32,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated SmsService with grouped message sending and wake lock functionality
 - Improved UI feedback with real-time "Sending to NUMBER (Part X/Y)" status
 - Better error handling and validation in SMS processing
+
 
 ## [1.1.0] - 2025-08-27
 
@@ -122,7 +125,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Min SDK**: Android 10 (API 29)
 - **Target SDK**: Android 14 (API 36)
 
-[Unreleased]: https://github.com/bilal-/MassPing/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/bilal-/MassPing/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/bilal-/MassPing/releases/tag/v1.2.0
 [1.1.0]: https://github.com/bilal-/MassPing/releases/tag/v1.1.0
 [1.0.2]: https://github.com/bilal-/MassPing/releases/tag/v1.0.2
 [1.0.1]: https://github.com/bilal-/MassPing/releases/tag/v1.0.1

@@ -51,13 +51,12 @@ log_error() {
 }
 
 show_usage() {
-    echo "Usage: $0 [patch|minor|major] [--hotfix]"
+    echo "Usage: $0 [patch|minor|major]"
     echo ""
     echo "Examples:"
     echo "  $0 patch"
     echo "  $0 minor" 
     echo "  $0 major"
-    echo "  $0 patch --hotfix"
     echo ""
     echo "Version bumping rules:"
     echo "  patch: 1.0.0 → 1.0.1 (bug fixes)"
@@ -70,7 +69,6 @@ show_usage() {
     echo "  • Builds and tests APKs"
     echo "  • Creates GitHub release with APK uploads"
     echo "  • Merges release branch to main"
-    echo "  • For hotfixes: works from existing release branch"
 }
 
 # Parse current version from build.gradle.kts
@@ -245,37 +243,16 @@ check_github_cli() {
     fi
 }
 
-# Create or switch to release branch
+# Create release branch from main
 manage_release_branch() {
     local version="$1"
-    local is_hotfix="$2"
     local branch_name="release/v$version"
-    local base_version
 
-    if [ "$is_hotfix" = true ]; then
-        # For hotfix, find existing release branch for base version
-        base_version=$(echo "$version" | sed 's/\.[0-9]*$//')  # Remove patch number
-        local existing_branch="release/v${base_version}.0"
-
-        if git show-ref --verify --quiet "refs/heads/$existing_branch"; then
-            log_info "Checking out existing release branch: $existing_branch" >&2
-            git checkout "$existing_branch" >&2
-
-            # Create hotfix branch from release branch
-            branch_name="release/v$version"
-            log_info "Creating hotfix branch: $branch_name" >&2
-            git checkout -b "$branch_name" >&2
-        else
-            log_warning "No existing release branch found for hotfix. Creating new release branch." >&2
-            git checkout -b "$branch_name" "$MAIN_BRANCH" >&2
-        fi
-    else
-        # Normal release: create new branch from main
-        log_info "Creating release branch: $branch_name" >&2
-        git checkout "$MAIN_BRANCH" >&2
-        git pull origin "$MAIN_BRANCH" >&2
-        git checkout -b "$branch_name" >&2
-    fi
+    # Create new branch from main
+    log_info "Creating release branch: $branch_name" >&2
+    git checkout "$MAIN_BRANCH" >&2
+    git pull origin "$MAIN_BRANCH" >&2
+    git checkout -b "$branch_name" >&2
 
     echo "$branch_name"
 }
@@ -342,7 +319,6 @@ get_release_notes() {
 # Create GitHub release
 create_github_release() {
     local version="$1"
-    local is_hotfix="$2"
 
     log_info "Creating GitHub release v$version..."
 
@@ -362,9 +338,7 @@ create_github_release() {
     fi
 
     # Prepare release notes
-    local full_notes="$release_notes"
-    if [ "$is_hotfix" = true ]; then
-        full_notes="🔥 **Hotfix Release**
+    local full_notes="🚀 **Release v$version**
 
 $release_notes
 
@@ -378,22 +352,6 @@ $release_notes
 See [CHANGELOG.md](https://github.com/$GITHUB_REPO/blob/v$version/CHANGELOG.md) for detailed changes.
 
 **Full Changelog:** https://github.com/$GITHUB_REPO/compare/v$(get_previous_version)...v$version"
-    else
-        full_notes="🚀 **Release v$version**
-
-$release_notes
-
----
-
-**Installation Options:**
-- 📱 **APK Files** (Direct install): Download \`${app_name}-v$version-release.apk\` or \`${app_name}-v$version-debug.apk\`
-- 📦 **AAB Files** (Google Play): Download \`${app_name}-v$version-release.aab\` for Play Store submission
-
-**What's Changed:**
-See [CHANGELOG.md](https://github.com/$GITHUB_REPO/blob/v$version/CHANGELOG.md) for detailed changes.
-
-**Full Changelog:** https://github.com/$GITHUB_REPO/compare/v$(get_previous_version)...v$version"
-    fi
 
     # Verify all build artifacts exist before creating release
     local missing_files=()
@@ -490,12 +448,6 @@ main() {
 
     # Parse arguments
     local bump_type="$1"
-    local is_hotfix=false
-
-    # Check for hotfix flag
-    if [ "$2" = "--hotfix" ]; then
-        is_hotfix=true
-    fi
 
     if [ -z "$bump_type" ]; then
         show_usage
@@ -524,9 +476,6 @@ main() {
     local new_version_code=$((current_version_code + 1))
 
     log_info "New version: $new_version (code: $new_version_code)"
-    if [ "$is_hotfix" = true ]; then
-        log_warning "🔥 HOTFIX RELEASE"
-    fi
 
     # Confirm with user
     if [ -t 0 ]; then  # Check if running interactively
@@ -541,8 +490,8 @@ main() {
     # Store original branch
     local original_branch=$(git symbolic-ref --short HEAD)
 
-    # Create/switch to release branch
-    local release_branch=$(manage_release_branch "$new_version" "$is_hotfix")
+    # Create release branch from main
+    local release_branch=$(manage_release_branch "$new_version")
 
     # Update files on release branch
     update_build_gradle "$new_version" "$new_version_code"
@@ -571,21 +520,15 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     build_release_artifacts "$new_version"
 
     # Create GitHub release with APK uploads
-    if create_github_release "$new_version" "$is_hotfix"; then
+    if create_github_release "$new_version"; then
         log_success "GitHub release published!"
     else
         log_error "Failed to create GitHub release"
         # Continue anyway - we can create it manually
     fi
 
-    # Merge release branch to main (unless it's a hotfix from an old release)
-    if [ "$is_hotfix" != true ] || [[ "$new_version" =~ ^$(echo "$current_version" | sed 's/\.[0-9]*$//').*$ ]]; then
-        merge_release_to_main "$new_version"
-    else
-        # For old hotfixes, just push the release branch
-        git push origin "$release_branch"
-        log_info "Hotfix branch pushed. Manual merge to main may be needed."
-    fi
+    # Merge release branch to main
+    merge_release_to_main "$new_version"
 
     # Clean up
     cleanup_backups
@@ -600,9 +543,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
     echo "  • Built and tested APKs and AABs"
     echo "  • Created GitHub release: https://github.com/$GITHUB_REPO/releases/tag/v$new_version"
     echo "  • Uploaded APK and AAB files to GitHub"
-    if [ "$is_hotfix" != true ]; then
-        echo "  • Merged to main branch"
-    fi
+    echo "  • Merged to main branch"
     echo ""
     echo "📦 Downloads:"
     echo "  APK (Direct Install): https://github.com/$GITHUB_REPO/releases/download/v$new_version/${app_name}-v$new_version-release.apk"

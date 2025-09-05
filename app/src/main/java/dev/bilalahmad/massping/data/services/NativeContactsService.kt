@@ -88,7 +88,7 @@ class NativeContactsService(private val context: Context) {
                         // Get organization data
                         val (company, jobTitle, department) = getOrganizationData(contactId)
 
-                        contacts[contactId] = Contact(
+                        val contact = Contact(
                             id = lookupKey ?: contactId,
                             name = displayName ?: "",
                             firstName = firstName,
@@ -103,6 +103,9 @@ class NativeContactsService(private val context: Context) {
                             groups = emptyList(),
                             photoUri = photoUri
                         )
+
+
+                        contacts[contactId] = contact
                     }
                 }
 
@@ -245,15 +248,20 @@ class NativeContactsService(private val context: Context) {
         )
 
         cursor?.use {
-            if (it.moveToFirst()) {
+            while (it.moveToNext()) {
                 val nickname = it.getString(it.getColumnIndexOrThrow(ContactsContract.CommonDataKinds.Nickname.NAME))
-                Log.d(TAG, "Found nickname for contact $contactId: $nickname")
-                return nickname
+
+                // Return the first non-null, non-empty nickname
+                if (!nickname.isNullOrBlank()) {
+                    Log.d(TAG, "Found nickname for contact $contactId: '$nickname'")
+                    return nickname
+                }
             }
         }
 
         return null
     }
+
 
     private fun getOrganizationData(contactId: String): Triple<String?, String?, String?> {
         val cursor = context.contentResolver.query(

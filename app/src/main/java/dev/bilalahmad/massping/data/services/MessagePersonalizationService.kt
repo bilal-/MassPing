@@ -75,6 +75,11 @@ class MessagePersonalizationService {
         // Replace nickname placeholder
         contact.nickname?.let { nickname ->
             personalized = personalized.replace(NICKNAME_PLACEHOLDER, nickname, ignoreCase = true)
+        } ?: run {
+            // Log warning if template contains {nickname} but contact has no nickname
+            if (personalized.contains(NICKNAME_PLACEHOLDER, ignoreCase = true)) {
+                Log.w(TAG, "Contact '${contact.name}' has no nickname but template contains {nickname}")
+            }
         }
 
         // Replace first name placeholder
